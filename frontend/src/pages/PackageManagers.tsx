@@ -1,84 +1,76 @@
+const envInfo = [
+  { label: 'Python Version', value: '3.12.1', icon: 'terminal' },
+  { label: 'pip Version', value: '24.0', icon: 'package_2' },
+  { label: 'Virtual Env', value: 'Active — .venv', icon: 'check_circle' },
+  { label: 'Site-Packages', value: '.venv/lib/python3.12/site-packages', icon: 'folder' },
+]
+
+const indexSources = [
+  { name: 'pypi', url: 'https://pypi.org/simple', trusted: true },
+  { name: 'files.pythonhosted.org', url: 'https://files.pythonhosted.org', trusted: true },
+]
+
 export default function PackageManagers() {
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="p-8 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <header className="p-8 pb-4 border-b border-black/10 dark:border-white/10">
         <div className="space-y-1">
-          <h2 className="text-3xl font-black tracking-tight">Package Managers</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Configure and manage package provider integrations</p>
+          <h2 className="text-3xl font-black tracking-tight">Environment</h2>
+          <p className="text-[#0f1723]/50 dark:text-white/50 text-sm">Python runtime and pip environment details</p>
         </div>
       </header>
 
       <div className="p-8 space-y-6 max-w-3xl">
-        {/* Winget Card */}
-        <div className="border border-[#0048ad] bg-white dark:bg-slate-900/40 rounded overflow-hidden">
-          <div className="p-5 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#0048ad]/10 rounded flex items-center justify-center">
-                <span className="material-symbols-outlined text-[#0048ad]">package_2</span>
-              </div>
-              <div>
-                <p className="text-sm font-black uppercase tracking-tight">Windows Package Manager (Winget)</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">Microsoft official package manager for Windows</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="text-xs font-bold text-emerald-500 uppercase">Active</span>
-            </div>
-          </div>
-
-          <div className="p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Version', value: 'v1.7.11261' },
-                { label: 'Source', value: 'winget + msstore' },
-                { label: 'Last Updated', value: 'Mar 8, 2026' },
-                { label: 'Response Time', value: '24ms' },
-              ].map((info) => (
-                <div key={info.label} className="space-y-0.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{info.label}</p>
-                  <p className="text-sm font-semibold font-mono">{info.value}</p>
+        {/* Runtime Info */}
+        <section>
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f1723]/40 dark:text-white/40 mb-4">Runtime</h3>
+          <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 divide-y divide-black/10 dark:divide-white/10">
+            {envInfo.map((row) => (
+              <div key={row.label} className="flex items-center justify-between px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-[#0048ad] text-[18px]">{row.icon}</span>
+                  <p className="text-xs font-black uppercase tracking-widest text-[#0f1723]/50 dark:text-white/50">{row.label}</p>
                 </div>
-              ))}
-            </div>
-
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Sources</p>
-              <div className="space-y-2">
-                {[
-                  { name: 'winget', url: 'https://cdn.winget.microsoft.com/cache', enabled: true },
-                  { name: 'msstore', url: 'https://storeedgefd.dsx.mp.microsoft.com/v9.0', enabled: true },
-                ].map((src) => (
-                  <div key={src.name} className="flex items-center justify-between text-sm p-3 bg-slate-50 dark:bg-slate-800/50 rounded">
-                    <div>
-                      <span className="font-bold font-mono text-[#0048ad]">{src.name}</span>
-                      <span className="text-slate-400 text-xs ml-3 font-mono">{src.url}</span>
-                    </div>
-                    <span className={`text-[10px] font-bold uppercase ${src.enabled ? 'text-emerald-500' : 'text-slate-400'}`}>
-                      {src.enabled ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </div>
-                ))}
+                <p className="text-sm font-bold font-mono">{row.value}</p>
               </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button className="px-4 py-2 bg-[#0048ad] text-white text-xs font-bold rounded hover:brightness-110 transition-all">
-                Update Sources
-              </button>
-              <button className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-xs font-bold rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                Reset to Defaults
-              </button>
-            </div>
+            ))}
           </div>
-        </div>
+        </section>
 
-        {/* Add Provider Placeholder */}
-        <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded p-6 flex flex-col items-center justify-center text-center text-slate-400 hover:border-[#0048ad] transition-colors cursor-pointer group">
-          <span className="material-symbols-outlined text-3xl mb-2 group-hover:text-[#0048ad] transition-colors">add_circle</span>
-          <p className="text-xs font-bold uppercase tracking-widest group-hover:text-[#0048ad] transition-colors">Add Provider</p>
-          <p className="text-[10px] mt-1">Chocolatey, Scoop, and more</p>
-        </div>
+        {/* pip Stats */}
+        <section>
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f1723]/40 dark:text-white/40 mb-4">pip Stats</h3>
+          <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 grid grid-cols-3 divide-x divide-black/10 dark:divide-white/10">
+            {[
+              { label: 'Installed', value: '47' },
+              { label: 'Outdated', value: '5' },
+              { label: 'Cache Size', value: '842 MB' },
+            ].map((stat) => (
+              <div key={stat.label} className="p-5 text-center">
+                <p className="text-2xl font-black font-mono text-[#0048ad]">{stat.value}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#0f1723]/40 dark:text-white/40 mt-1">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* PyPI Index Sources */}
+        <section>
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f1723]/40 dark:text-white/40 mb-4">PyPI Index Sources</h3>
+          <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 divide-y divide-black/10 dark:divide-white/10">
+            {indexSources.map((src) => (
+              <div key={src.name} className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <p className="text-sm font-bold font-mono text-[#0048ad]">{src.name}</p>
+                  <p className="text-[11px] text-[#0f1723]/40 dark:text-white/40 font-mono mt-0.5">{src.url}</p>
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 border ${src.trusted ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5' : 'border-black/10 dark:border-white/10 text-[#0f1723]/40 dark:text-white/40'}`}>
+                  {src.trusted ? 'Trusted' : 'Untrusted'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )

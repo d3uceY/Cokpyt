@@ -8,7 +8,7 @@ const InstalledPackages = lazy(() => import('@/pages/InstalledPackages'))
 const Search = lazy(() => import('@/pages/Search'))
 const Updates = lazy(() => import('@/pages/Updates'))
 const Cleanup = lazy(() => import('@/pages/Cleanup'))
-const PackageManagers = lazy(() => import('@/pages/PackageManagers'))
+const Environment = lazy(() => import('@/pages/PackageManagers'))
 const History = lazy(() => import('@/pages/History'))
 const Logs = lazy(() => import('@/pages/Logs'))
 const Settings = lazy(() => import('@/pages/Settings'))
@@ -32,7 +32,7 @@ function App() {
             <Route path="search" element={<Search />} />
             <Route path="updates" element={<Updates />} />
             <Route path="cleanup" element={<Cleanup />} />
-            <Route path="package-managers" element={<PackageManagers />} />
+            <Route path="environment" element={<Environment />} />
             <Route path="history" element={<History />} />
             <Route path="logs" element={<Logs />} />
             <Route path="settings" element={<Settings />} />
