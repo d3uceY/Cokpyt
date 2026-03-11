@@ -1,0 +1,53 @@
+package pip
+
+import (
+	"os"
+	"os/exec"
+	"strings"
+)
+
+// PipEnvironmentInfo holds Python runtime and environment details.
+type PipEnvironmentInfo struct {
+	PythonVersion string `json:"pythonVersion"`
+	PipVersion    string `json:"pipVersion"`
+	PythonPath    string `json:"pythonPath"`
+	SitePackages  string `json:"sitePackages"`
+	VenvActive    bool   `json:"venvActive"`
+	VenvPath      string `json:"venvPath"`
+}
+
+// GetPipEnvironmentInfo returns the full Python environment details.
+func GetPipEnvironmentInfo() (PipEnvironmentInfo, error) {
+	var info PipEnvironmentInfo
+
+	// Python version
+	pyOut, err := exec.Command("python", "--version").CombinedOutput()
+	if err == nil {
+		info.PythonVersion = strings.TrimSpace(strings.TrimPrefix(string(pyOut), "Python "))
+	} else {
+		info.PythonVersion = "unknown"
+	}
+
+	// pip version
+	pipOut, _ := pip("--version").Output()
+	parts := strings.Fields(string(pipOut))
+	if len(parts) >= 2 {
+		info.PipVersion = parts[1]
+	}
+
+	// Python executable path
+	pathOut, _ := exec.Command("python", "-c", "import sys; print(sys.executable)").Output()
+	info.PythonPath = strings.TrimSpace(string(pathOut))
+
+	// Site-packages
+	sp, _ := getSitePackages()
+	info.SitePackages = sp
+
+	// Virtual environment
+	if venv := os.Getenv("VIRTUAL_ENV"); venv != "" {
+		info.VenvActive = true
+		info.VenvPath = venv
+	}
+
+	return info, nil
+}

@@ -16,6 +16,30 @@ export namespace pip {
 	        this.pycacheSize = source["pycacheSize"];
 	    }
 	}
+	export class HistoryEntry {
+	    id: string;
+	    action: string;
+	    package: string;
+	    version: string;
+	    status: string;
+	    timestamp: string;
+	    command: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HistoryEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.action = source["action"];
+	        this.package = source["package"];
+	        this.version = source["version"];
+	        this.status = source["status"];
+	        this.timestamp = source["timestamp"];
+	        this.command = source["command"];
+	    }
+	}
 	export class OutdatedPackage {
 	    name: string;
 	    version: string;
@@ -32,6 +56,28 @@ export namespace pip {
 	        this.version = source["version"];
 	        this.latestVersion = source["latestVersion"];
 	        this.bumpType = source["bumpType"];
+	    }
+	}
+	export class PipEnvironmentInfo {
+	    pythonVersion: string;
+	    pipVersion: string;
+	    pythonPath: string;
+	    sitePackages: string;
+	    venvActive: boolean;
+	    venvPath: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PipEnvironmentInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pythonVersion = source["pythonVersion"];
+	        this.pipVersion = source["pipVersion"];
+	        this.pythonPath = source["pythonPath"];
+	        this.sitePackages = source["sitePackages"];
+	        this.venvActive = source["venvActive"];
+	        this.venvPath = source["venvPath"];
 	    }
 	}
 	export class PipPackage {

@@ -1,18 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { GetInstalledPackages, GetOutdatedPackages, GetPythonInfo, UpgradePackage } from '../../wailsjs/go/main/App'
+import { GetInstalledPackages, GetOutdatedPackages, GetPythonInfo, GetHistory, UpgradePackage } from '../../wailsjs/go/main/App'
 import type { pip } from '../../wailsjs/go/models'
 import type { AppOutletContext } from '../components/layout/AppLayout'
 
-const recentActivity = [
-  { id: 1, name: 'numpy', version: '1.26.4', action: 'upgrade', status: 'success' as const, time: '5M AGO' },
-  { id: 2, name: 'requests', version: '2.31.0', action: 'install', status: 'success' as const, time: '1H AGO' },
-  { id: 3, name: 'pandas', version: '2.2.0', action: 'upgrade', status: 'processing' as const, time: 'JUST NOW' },
-]
-
-const statusBadge = {
+const statusBadge: Record<string, string> = {
   success: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400',
-  processing: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
   failed: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
 }
 
@@ -22,6 +15,7 @@ export default function Dashboard() {
   const [packages, setPackages] = useState<pip.PipPackage[]>([])
   const [outdated, setOutdated] = useState<pip.OutdatedPackage[]>([])
   const [pythonInfo, setPythonInfo] = useState<pip.PythonInfo | null>(null)
+  const [recentActivity, setRecentActivity] = useState<pip.HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [upgradingAll, setUpgradingAll] = useState(false)
   const [lastSync, setLastSync] = useState(new Date())
@@ -29,14 +23,16 @@ export default function Dashboard() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [pkgs, out, info] = await Promise.all([
+      const [pkgs, out, info, hist] = await Promise.all([
         GetInstalledPackages(),
         GetOutdatedPackages(),
         GetPythonInfo(),
+        GetHistory(),
       ])
       setPackages(pkgs ?? [])
       setOutdated(out ?? [])
       setPythonInfo(info)
+      setRecentActivity((hist ?? []).slice(0, 5))
       setUpdateCount((out ?? []).length)
       setLastSync(new Date())
     } finally {
@@ -179,24 +175,38 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                  {recentActivity.map((item) => (
+                  {loading && Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <td key={j} className="p-4"><div className="h-3 bg-black/8 dark:bg-white/8" style={{ width: `${50 + j * 20}px` }} /></td>
+                      ))}
+                    </tr>
+                  ))}
+                  {!loading && recentActivity.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-[10px] font-bold uppercase tracking-widest text-[#0f1723]/30 dark:text-white/30">
+                        No activity yet — install or upgrade a package to start logging
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && recentActivity.map((item) => (
                     <tr key={item.id} className="hover:bg-black/2 dark:hover:bg-white/3 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-[#0048ad]/10 flex items-center justify-center">
                             <span className="material-symbols-outlined text-[#0048ad] text-sm">data_object</span>
                           </div>
-                          <span className="text-sm font-bold font-mono">{item.name}</span>
+                          <span className="text-sm font-bold font-mono">{item.package}</span>
                         </div>
                       </td>
-                      <td className="p-4 text-xs font-mono">{item.version}</td>
+                      <td className="p-4 text-xs font-mono">{item.version || '—'}</td>
                       <td className="p-4 text-[10px] font-bold uppercase tracking-tighter">{item.action}</td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border ${statusBadge[item.status]}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border ${statusBadge[item.status] ?? ''}`}>
                           {item.status}
                         </span>
                       </td>
-                      <td className="p-4 text-[10px] font-bold text-[#0f1723]/40 dark:text-white/40 text-right">{item.time}</td>
+                      <td className="p-4 text-[10px] font-bold text-[#0f1723]/40 dark:text-white/40 text-right">{item.timestamp}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -173,32 +173,77 @@ func parsePipShow(output string) map[string]string {
 	return result
 }
 
+// LogEmitter is set by app.go to forward log lines to the frontend via Wails events.
+var LogEmitter func(level, msg string)
+
+func emitLog(level, msg string) {
+	if LogEmitter != nil {
+		LogEmitter(level, msg)
+	}
+}
+
 // InstallPackage installs a pip package by name.
 func InstallPackage(name string) error {
-	cmd := pip("install", name)
-	out, err := cmd.CombinedOutput()
+	cmd := "pip install " + name
+	emitLog("INFO", "Running: "+cmd)
+	out, err := pip("install", name).CombinedOutput()
+	outStr := strings.TrimSpace(string(out))
 	if err != nil {
-		return fmt.Errorf("pip install failed: %s", strings.TrimSpace(string(out)))
+		emitLog("ERR", outStr)
+		appendHistory(newEntry("install", name, "", cmd, "failed"))
+		return fmt.Errorf("pip install failed: %s", outStr)
 	}
+	emitLog("INFO", outStr)
+	// Extract installed version from output.
+	ver := extractInstalledVersion(outStr, name)
+	appendHistory(newEntry("install", name, ver, cmd, "success"))
 	return nil
 }
 
 // UninstallPackage removes a pip package by name.
 func UninstallPackage(name string) error {
-	cmd := pip("uninstall", "-y", name)
-	out, err := cmd.CombinedOutput()
+	cmd := "pip uninstall -y " + name
+	emitLog("INFO", "Running: "+cmd)
+	out, err := pip("uninstall", "-y", name).CombinedOutput()
+	outStr := strings.TrimSpace(string(out))
 	if err != nil {
-		return fmt.Errorf("pip uninstall failed: %s", strings.TrimSpace(string(out)))
+		emitLog("ERR", outStr)
+		appendHistory(newEntry("uninstall", name, "", cmd, "failed"))
+		return fmt.Errorf("pip uninstall failed: %s", outStr)
 	}
+	emitLog("INFO", outStr)
+	appendHistory(newEntry("uninstall", name, "", cmd, "success"))
 	return nil
 }
 
 // UpgradePackage upgrades a pip package to its latest version.
 func UpgradePackage(name string) error {
-	cmd := pip("install", "--upgrade", name)
-	out, err := cmd.CombinedOutput()
+	cmd := "pip install --upgrade " + name
+	emitLog("INFO", "Running: "+cmd)
+	out, err := pip("install", "--upgrade", name).CombinedOutput()
+	outStr := strings.TrimSpace(string(out))
 	if err != nil {
-		return fmt.Errorf("pip upgrade failed: %s", strings.TrimSpace(string(out)))
+		emitLog("ERR", outStr)
+		appendHistory(newEntry("upgrade", name, "", cmd, "failed"))
+		return fmt.Errorf("pip upgrade failed: %s", outStr)
 	}
+	emitLog("INFO", outStr)
+	ver := extractInstalledVersion(outStr, name)
+	appendHistory(newEntry("upgrade", name, ver, cmd, "success"))
 	return nil
+}
+
+// extractInstalledVersion tries to parse "Successfully installed <name>-<ver>" from pip output.
+func extractInstalledVersion(output, name string) string {
+	prefix := "Successfully installed "
+	for _, line := range strings.Split(output, "\n") {
+		if strings.HasPrefix(line, prefix) {
+			for _, tok := range strings.Fields(strings.TrimPrefix(line, prefix)) {
+				if strings.HasPrefix(strings.ToLower(tok), strings.ToLower(name)+"-") {
+					return strings.TrimPrefix(strings.ToLower(tok), strings.ToLower(name)+"-")
+				}
+			}
+		}
+	}
+	return ""
 }

@@ -1,37 +1,41 @@
-import { useState } from 'react'
-
-interface HistoryEntry {
-  id: string
-  action: 'install' | 'upgrade' | 'uninstall'
-  package: string
-  version: string
-  status: 'success' | 'failed'
-  timestamp: string
-  command: string
-}
-
-const mockHistory: HistoryEntry[] = [
-  { id: '1', action: 'upgrade', package: 'numpy', version: '1.26.4', status: 'success', timestamp: '2026-03-09 14:32', command: 'pip install --upgrade numpy' },
-  { id: '2', action: 'install', package: 'httpx', version: '0.26.0', status: 'success', timestamp: '2026-03-09 12:15', command: 'pip install httpx' },
-  { id: '3', action: 'install', package: 'pydantic', version: '2.5.3', status: 'success', timestamp: '2026-03-08 18:04', command: 'pip install pydantic==2.5.3' },
-  { id: '4', action: 'uninstall', package: 'Flask', version: '3.0.1', status: 'success', timestamp: '2026-03-08 10:22', command: 'pip uninstall flask' },
-  { id: '5', action: 'install', package: 'black', version: '24.1.1', status: 'failed', timestamp: '2026-03-07 20:11', command: 'pip install black' },
-  { id: '6', action: 'upgrade', package: 'pandas', version: '2.2.0', status: 'success', timestamp: '2026-03-07 09:30', command: 'pip install --upgrade pandas' },
-  { id: '7', action: 'install', package: 'fastapi', version: '0.109.0', status: 'success', timestamp: '2026-03-06 16:48', command: 'pip install fastapi[all]' },
-  { id: '8', action: 'upgrade', package: 'Django', version: '5.0.3', status: 'success', timestamp: '2026-03-06 11:05', command: 'pip install --upgrade Django' },
-]
+import { useState, useEffect, useCallback } from 'react'
+import { GetHistory } from '../../wailsjs/go/main/App'
+import type { pip } from '../../wailsjs/go/models'
 
 const actionStyles = {
-  install: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400',
-  upgrade: 'bg-[#0048ad]/10 text-[#0048ad]',
+  install:   'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400',
+  upgrade:   'bg-[#0048ad]/10 text-[#0048ad]',
   uninstall: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
 }
 
 export default function History() {
-  const [filter, setFilter] = useState<'all' | 'install' | 'upgrade' | 'uninstall'>('all')
+  const [history, setHistory]   = useState<pip.HistoryEntry[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [filter, setFilter]     = useState<'all' | 'install' | 'upgrade' | 'uninstall'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const filtered = mockHistory.filter((h) => filter === 'all' || h.action === filter)
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const entries = await GetHistory()
+      setHistory(entries ?? [])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const filtered = history.filter((h) => filter === 'all' || h.action === filter)
+
+  const handleExport = () => {
+    const csv = ['Action,Package,Version,Status,Timestamp,Command',
+      ...history.map(h => `${h.action},${h.package},${h.version},${h.status},${h.timestamp},"${h.command}"`)].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'pip-history.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -41,13 +45,26 @@ export default function History() {
             <h2 className="text-3xl font-black tracking-tight">History</h2>
             <p className="text-[#0f1723]/50 dark:text-white/50 text-sm">pip command audit trail</p>
           </div>
-          <button className="flex items-center gap-2 px-4 h-9 border border-black/15 dark:border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-            <span className="material-symbols-outlined text-[16px]">download</span>
-            Export
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={load}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 h-9 border border-black/15 dark:border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+            >
+              <span className={`material-symbols-outlined text-[16px] ${loading ? 'animate-spin' : ''}`}>refresh</span>
+              Refresh
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={history.length === 0}
+              className="flex items-center gap-2 px-4 h-9 border border-black/15 dark:border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[16px]">download</span>
+              Export CSV
+            </button>
+          </div>
         </div>
 
-        {/* Filter tabs */}
         <div className="mt-6 flex gap-0 border-b border-black/10 dark:border-white/10">
           {(['all', 'install', 'upgrade', 'uninstall'] as const).map((f) => (
             <button
@@ -66,70 +83,72 @@ export default function History() {
       </header>
 
       <div className="flex-1 overflow-auto px-8 pb-8">
-        <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden">
-          <table className="w-full text-left border-collapse min-w-[600px]">
-            <thead>
-              <tr className="bg-black/5 dark:bg-white/5">
-                {['Action', 'Package', 'Version', 'Status', 'Time', ''].map((h, i) => (
-                  <th
-                    key={`${h}${i}`}
-                    className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#0f1723]/40 dark:text-white/40 border-b border-black/10 dark:border-white/10"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-              {filtered.map((entry) => (
-                <>
-                  <tr
-                    key={entry.id}
-                    className="hover:bg-black/2 dark:hover:bg-white/3 transition-colors cursor-pointer"
-                    onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-                  >
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${actionStyles[entry.action]}`}>
-                        {entry.action}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold font-mono">{entry.package}</td>
-                    <td className="px-6 py-4 text-sm font-mono text-[#0f1723]/50 dark:text-white/50">{entry.version}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 ${entry.status === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-                        <span className={`text-xs font-bold ${entry.status === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-500'}`}>
-                          {entry.status}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs text-[#0f1723]/40 dark:text-white/40 font-mono">{entry.timestamp}</td>
-                    <td className="px-6 py-4">
-                      <span className={`material-symbols-outlined text-[#0f1723]/30 dark:text-white/30 text-[18px] transition-transform ${expandedId === entry.id ? 'rotate-180' : ''}`}>
-                        expand_more
-                      </span>
-                    </td>
+        {!loading && history.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center text-[#0f1723]/30 dark:text-white/30">
+            <span className="material-symbols-outlined text-6xl mb-4 opacity-30">history</span>
+            <p className="text-sm font-bold uppercase tracking-widest">No history yet</p>
+            <p className="text-xs mt-1">Install, upgrade, or uninstall a package to start logging</p>
+          </div>
+        ) : (
+          <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden">
+            <table className="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr className="bg-black/5 dark:bg-white/5">
+                  {['Action', 'Package', 'Version', 'Status', 'Time', ''].map((h, i) => (
+                    <th key={`${h}${i}`} className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#0f1723]/40 dark:text-white/40 border-b border-black/10 dark:border-white/10">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                {loading && Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <td key={j} className="px-6 py-4"><div className="h-3 bg-black/8 dark:bg-white/8 rounded-sm" style={{ width: `${60 + j * 15}px` }} /></td>
+                    ))}
                   </tr>
-                  {expandedId === entry.id && (
-                    <tr key={`${entry.id}-expand`} className="bg-black/3 dark:bg-white/3">
-                      <td colSpan={6} className="px-6 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#0f1723]/30 dark:text-white/30 mb-1">Command</p>
-                        <code className="text-xs font-mono text-[#0048ad]">{entry.command}</code>
+                ))}
+                {!loading && filtered.map((entry) => (
+                  <>
+                    <tr
+                      key={entry.id}
+                      className="hover:bg-black/2 dark:hover:bg-white/3 transition-colors cursor-pointer"
+                      onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                    >
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${actionStyles[entry.action as keyof typeof actionStyles] ?? ''}`}>
+                          {entry.action}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold font-mono">{entry.package}</td>
+                      <td className="px-6 py-4 text-sm font-mono text-[#0f1723]/50 dark:text-white/50">{entry.version || '—'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 ${entry.status === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                          <span className="text-xs font-bold">{entry.status}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-[#0f1723]/40 dark:text-white/40">{entry.timestamp}</td>
+                      <td className="px-6 py-4">
+                        <span className="material-symbols-outlined text-[14px] text-[#0f1723]/30 dark:text-white/30">
+                          {expandedId === entry.id ? 'expand_less' : 'expand_more'}
+                        </span>
                       </td>
                     </tr>
-                  )}
-                </>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-[#0f1723]/30 dark:text-white/30">
-                    No history entries.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    {expandedId === entry.id && (
+                      <tr key={`${entry.id}-expand`}>
+                        <td colSpan={6} className="px-6 py-3 bg-black/3 dark:bg-white/3 border-t border-black/5 dark:border-white/5">
+                          <code className="text-xs font-mono text-[#0048ad]">{entry.command}</code>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

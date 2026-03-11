@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import type { AppOutletContext } from '../components/layout/AppLayout'
 
 interface SettingToggle {
   id: string
@@ -8,13 +10,10 @@ interface SettingToggle {
 }
 
 export default function Settings() {
-  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>('dark')
+  const { isDark, onToggleTheme } = useOutletContext<AppOutletContext>()
   const [toggles, setToggles] = useState<SettingToggle[]>([
     { id: 'auto-update-check', label: 'Automatic Update Checks', description: 'Check for package updates on startup', value: true },
     { id: 'silent-install', label: 'Silent Installs', description: 'Run installations without interactive prompts', value: true },
-    { id: 'notify-critical', label: 'Critical Update Notifications', description: 'Alert when critical security patches are available', value: true },
-    { id: 'startup', label: 'Start with Windows', description: 'Launch Cokpit automatically at login', value: false },
-    { id: 'telemetry', label: 'Anonymous Usage Data', description: 'Help improve Cokpit by sharing anonymous usage metrics', value: false },
   ])
 
   const toggle = (id: string) =>
@@ -36,12 +35,12 @@ export default function Settings() {
           <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 p-5">
             <p className="text-sm font-bold mb-3">Theme</p>
             <div className="flex gap-3">
-              {(['dark', 'light', 'system'] as const).map((t) => (
+              {(['dark', 'light'] as const).map((t) => (
                 <button
                   key={t}
-                  onClick={() => setTheme(t)}
+                  onClick={() => onToggleTheme(t)}
                   className={`px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors border ${
-                    theme === t
+                    (isDark ? 'dark' : 'light') === t
                       ? 'bg-[#0048ad] text-white border-[#0048ad]'
                       : 'border-black/15 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5'
                   }`}

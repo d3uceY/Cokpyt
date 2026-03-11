@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"Cokpit/backend/pip"
+
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -21,6 +23,9 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	pip.LogEmitter = func(level, msg string) {
+		wailsruntime.EventsEmit(ctx, "pip:log", level, msg)
+	}
 }
 
 // Greet returns a greeting for the given name
@@ -72,4 +77,25 @@ func (a *App) GetCleanupInfo() (pip.CleanupInfo, error) {
 // types may contain "cache", "orphan", and/or "temp".
 func (a *App) RunCleanup(types []string) error {
 	return pip.RunCleanup(types)
+}
+
+// GetHistory returns all recorded pip operation history, newest first.
+func (a *App) GetHistory() ([]pip.HistoryEntry, error) {
+	return pip.GetHistory()
+}
+
+// GetPipEnvironmentInfo returns the full Python runtime environment details.
+func (a *App) GetPipEnvironmentInfo() (pip.PipEnvironmentInfo, error) {
+	return pip.GetPipEnvironmentInfo()
+}
+
+// BatchUninstall removes multiple pip packages and returns a map of name→error.
+func (a *App) BatchUninstall(names []string) map[string]string {
+	errs := make(map[string]string)
+	for _, name := range names {
+		if err := pip.UninstallPackage(name); err != nil {
+			errs[name] = err.Error()
+		}
+	}
+	return errs
 }
