@@ -1,6 +1,7 @@
 
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Loader } from 'lucide-react'
 import { AppLayout } from '@/components/layout/AppLayout'
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
@@ -16,7 +17,7 @@ const Settings = lazy(() => import('@/pages/Settings'))
 function PageFallback() {
   return (
     <div className="flex-1 flex items-center justify-center h-screen">
-      <span className="material-symbols-outlined text-4xl text-slate-400 animate-spin">progress_activity</span>
+      <span className="material-symbols-outlined text-4xl text-slate-400 animate-spin"><Loader/></span>
     </div>
   )
 }

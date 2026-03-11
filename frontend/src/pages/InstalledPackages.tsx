@@ -1,4 +1,17 @@
+
 import { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { PipTerminal } from '@/components/ui/PipTerminal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GetInstalledPackages, InstallPackage, UninstallPackage, UpgradePackage } from '../../wailsjs/go/main/App';
 import type { pip } from '../../wailsjs/go/models';
@@ -9,6 +22,11 @@ export default function InstalledPackages() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [installName, setInstallName] = useState('');
   const [showInstall, setShowInstall] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmUninstall, setConfirmUninstall] = useState<string | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [terminalTitle, setTerminalTitle] = useState('');
   const pageSize = 20;
 
   const queryClient = useQueryClient();
@@ -23,7 +41,10 @@ export default function InstalledPackages() {
     // cacheTime is not a valid option in the object overload, so remove it
   });
 
+
   const handleUpgrade = async (name: string) => {
+    setTerminalTitle(`pip install --upgrade ${name}`);
+    setTerminalOpen(true);
     setActionLoading(name);
     try {
       await UpgradePackage(name);
@@ -36,8 +57,8 @@ export default function InstalledPackages() {
   };
 
   const handleUninstall = async (name: string) => {
-    // TODO: Replace with alert-dialog confirmation
-    if (!window.confirm(`Uninstall ${name}?`)) return;
+    setTerminalTitle(`pip uninstall -y ${name}`);
+    setTerminalOpen(true);
     setActionLoading(name);
     try {
       await UninstallPackage(name);
@@ -46,11 +67,32 @@ export default function InstalledPackages() {
       alert(`Failed to uninstall ${name}: ${e?.message ?? e}`);
     } finally {
       setActionLoading(null);
+      setConfirmUninstall(null);
+    }
+  };
+
+  const handleBulkUninstall = async () => {
+    setTerminalTitle(`pip uninstall -y (${selected.size} packages)`);
+    setTerminalOpen(true);
+    setActionLoading('bulk');
+    try {
+      for (const name of selected) {
+        await UninstallPackage(name);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['installed-packages'] });
+      setSelected(new Set());
+    } catch (e: any) {
+      alert(`Failed to uninstall selected packages: ${e?.message ?? e}`);
+    } finally {
+      setActionLoading(null);
+      setConfirmBulk(false);
     }
   };
 
   const handleInstall = async () => {
     if (!installName.trim()) return;
+    setTerminalTitle(`pip install ${installName.trim()}`);
+    setTerminalOpen(true);
     setActionLoading('__install__');
     try {
       await InstallPackage(installName.trim());
@@ -70,8 +112,25 @@ export default function InstalledPackages() {
       p.summary.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filtered.length / pageSize)
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const allSelected = filtered.length > 0 && selected.size === filtered.length;
+
+  const toggleSelect = (name: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelected(() => {
+      if (allSelected) return new Set();
+      return new Set(filtered.map((p) => p.name));
+    });
+  };
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -86,6 +145,36 @@ export default function InstalledPackages() {
           </div>
 
           <div className="flex items-center gap-3">
+            {selected.size > 0 && (
+              <>
+                <AlertDialog open={confirmBulk} onOpenChange={setConfirmBulk}>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      className="flex items-center gap-2 px-4 h-10 bg-red-600 hover:brightness-110 text-white font-bold text-sm transition-all"
+                      onClick={() => setConfirmBulk(true)}
+                      disabled={actionLoading === 'bulk'}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                      Bulk Uninstall ({selected.size})
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Uninstall selected packages?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to uninstall {selected.size} selected package(s)? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={actionLoading === 'bulk'}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleBulkUninstall} disabled={actionLoading === 'bulk'}>
+                        {actionLoading === 'bulk' ? 'Uninstalling…' : 'Uninstall'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            )}
             <button
               className="flex items-center gap-2 px-4 h-10 bg-[#0048ad] hover:brightness-110 text-white font-bold text-sm transition-all"
               onClick={() => setShowInstall(true)}
@@ -150,6 +239,14 @@ export default function InstalledPackages() {
           </div>
         )}
 
+        {/* Live terminal output */}
+        <PipTerminal
+          open={terminalOpen}
+          title={terminalTitle}
+          running={actionLoading !== null}
+          onClose={() => setTerminalOpen(false)}
+        />
+
         {/* Controls */}
         <div className="mt-6 flex gap-3 flex-wrap">
           <div className="relative flex-1 min-w-48 max-w-md">
@@ -192,12 +289,19 @@ export default function InstalledPackages() {
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-black/5 dark:bg-white/5">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-wider text-[#0f1723]/40 dark:text-white/40 border-b border-black/10 dark:border-white/10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all packages"
+                  />
+                </th>
                 {["Package", "Version", "Latest", "Source", "Status", "Actions"].map(
                   (h, i) => (
                     <th
                       key={h}
-                      className={`px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#0f1723]/40 dark:text-white/40 border-b border-black/10 dark:border-white/10${i === 5 ? " text-right" : ""
-                        }`}
+                      className={`px-6 py-4 text-[10px] font-black uppercase tracking-wider text-[#0f1723]/40 dark:text-white/40 border-b border-black/10 dark:border-white/10${i === 5 ? " text-right" : ""}`}
                     >
                       {h}
                     </th>
@@ -233,13 +337,21 @@ export default function InstalledPackages() {
                 ))}
               {!loading &&
                 paginated.map((pkg) => {
-                  const isActing = actionLoading === pkg.name
-
+                  const isActing = actionLoading === pkg.name;
+                  const isChecked = selected.has(pkg.name);
                   return (
                     <tr
                       key={pkg.name}
                       className="hover:bg-black/2 dark:hover:bg-white/3 transition-colors"
                     >
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelect(pkg.name)}
+                          aria-label={`Select ${pkg.name}`}
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-[#0048ad]/10 flex items-center justify-center">
@@ -247,7 +359,6 @@ export default function InstalledPackages() {
                               data_object
                             </span>
                           </div>
-
                           <div>
                             <p className="text-sm font-bold font-mono">
                               {pkg.name}
@@ -263,11 +374,9 @@ export default function InstalledPackages() {
                           </div>
                         </div>
                       </td>
-
                       <td className="px-6 py-4 text-sm font-mono text-[#0f1723]/60 dark:text-white/60">
                         {pkg.version}
                       </td>
-
                       <td className="px-6 py-4">
                         {pkg.status === "update-available" ? (
                           <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5">
@@ -279,13 +388,11 @@ export default function InstalledPackages() {
                           </span>
                         )}
                       </td>
-
                       <td className="px-6 py-4">
                         <span className="px-2 py-1 border border-black/10 dark:border-white/10 text-[10px] font-bold uppercase tracking-wider text-[#0f1723]/50 dark:text-white/50">
                           PyPI
                         </span>
                       </td>
-
                       <td className="px-6 py-4">
                         {pkg.status === "update-available" ? (
                           <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
@@ -297,7 +404,6 @@ export default function InstalledPackages() {
                           </span>
                         )}
                       </td>
-
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {pkg.status === "update-available" ? (
@@ -316,17 +422,35 @@ export default function InstalledPackages() {
                               Upgrade
                             </button>
                           )}
-                          <button
-                            className="px-3 py-1.5 text-[#0f1723]/50 dark:text-white/50 hover:text-red-500 dark:hover:text-red-400 text-xs font-bold transition-colors"
-                            disabled={isActing}
-                            onClick={() => handleUninstall(pkg.name)}
-                          >
-                            {isActing ? "…" : "Uninstall"}
-                          </button>
+                          <AlertDialog open={confirmUninstall === pkg.name} onOpenChange={(open) => setConfirmUninstall(open ? pkg.name : null)}>
+                            <AlertDialogTrigger asChild>
+                              <button
+                                className="px-3 py-1.5 text-[#0f1723]/50 dark:text-white/50 hover:text-red-500 dark:hover:text-red-400 text-xs font-bold transition-colors"
+                                disabled={isActing}
+                                onClick={() => setConfirmUninstall(pkg.name)}
+                              >
+                                {isActing ? "…" : "Uninstall"}
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Uninstall {pkg.name}?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to uninstall <b>{pkg.name}</b>? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isActing}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleUninstall(pkg.name)} disabled={isActing}>
+                                  {isActing ? 'Uninstalling…' : 'Uninstall'}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </td>
                     </tr>
-                  )
+                  );
                 })}
             </tbody>
           </table>

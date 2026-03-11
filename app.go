@@ -25,6 +25,9 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	pip.LogEmitter = func(level, msg string) {
 		wailsruntime.EventsEmit(ctx, "pip:log", level, msg)
+		if level == "STREAM" {
+			wailsruntime.EventsEmit(ctx, "pip:stream", msg)
+		}
 	}
 }
 

@@ -1,12 +1,12 @@
 package pip
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
 )
-
 // OutdatedPackage represents a pip package that has a newer version available.
 type OutdatedPackage struct {
 	Name          string `json:"name"`
@@ -184,52 +184,91 @@ func emitLog(level, msg string) {
 
 // InstallPackage installs a pip package by name.
 func InstallPackage(name string) error {
-	cmd := "pip install " + name
-	emitLog("INFO", "Running: "+cmd)
-	out, err := pip("install", name).CombinedOutput()
-	outStr := strings.TrimSpace(string(out))
+	cmdStr := "pip install " + name
+	emitLog("INFO", "Running: "+cmdStr)
+	cmd := pip("install", name)
+	stdout, _ := cmd.StdoutPipe()
+	cmd.Stderr = cmd.Stdout
+	if err := cmd.Start(); err != nil {
+		emitLog("ERR", err.Error())
+		return err
+	}
+	scanner := bufio.NewScanner(stdout)
+	var outLines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		outLines = append(outLines, line)
+		emitLog("STREAM", line)
+	}
+	err := cmd.Wait()
+	outStr := strings.Join(outLines, "\n")
 	if err != nil {
-		emitLog("ERR", outStr)
-		appendHistory(newEntry("install", name, "", cmd, "failed"))
+		emitLog("ERR", "pip install failed: "+outStr)
+		appendHistory(newEntry("install", name, "", cmdStr, "failed"))
 		return fmt.Errorf("pip install failed: %s", outStr)
 	}
-	emitLog("INFO", outStr)
 	// Extract installed version from output.
 	ver := extractInstalledVersion(outStr, name)
-	appendHistory(newEntry("install", name, ver, cmd, "success"))
+	appendHistory(newEntry("install", name, ver, cmdStr, "success"))
 	return nil
 }
 
 // UninstallPackage removes a pip package by name.
 func UninstallPackage(name string) error {
-	cmd := "pip uninstall -y " + name
-	emitLog("INFO", "Running: "+cmd)
-	out, err := pip("uninstall", "-y", name).CombinedOutput()
-	outStr := strings.TrimSpace(string(out))
+	cmdStr := "pip uninstall -y " + name
+	emitLog("INFO", "Running: "+cmdStr)
+	cmd := pip("uninstall", "-y", name)
+	stdout, _ := cmd.StdoutPipe()
+	cmd.Stderr = cmd.Stdout
+	if err := cmd.Start(); err != nil {
+		emitLog("ERR", err.Error())
+		return err
+	}
+	scanner := bufio.NewScanner(stdout)
+	var outLines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		outLines = append(outLines, line)
+		emitLog("STREAM", line)
+	}
+	err := cmd.Wait()
+	outStr := strings.Join(outLines, "\n")
 	if err != nil {
-		emitLog("ERR", outStr)
-		appendHistory(newEntry("uninstall", name, "", cmd, "failed"))
+		emitLog("ERR", "pip uninstall failed: "+outStr)
+		appendHistory(newEntry("uninstall", name, "", cmdStr, "failed"))
 		return fmt.Errorf("pip uninstall failed: %s", outStr)
 	}
-	emitLog("INFO", outStr)
-	appendHistory(newEntry("uninstall", name, "", cmd, "success"))
+	appendHistory(newEntry("uninstall", name, "", cmdStr, "success"))
 	return nil
 }
 
 // UpgradePackage upgrades a pip package to its latest version.
 func UpgradePackage(name string) error {
-	cmd := "pip install --upgrade " + name
-	emitLog("INFO", "Running: "+cmd)
-	out, err := pip("install", "--upgrade", name).CombinedOutput()
-	outStr := strings.TrimSpace(string(out))
+	cmdStr := "pip install --upgrade " + name
+	emitLog("INFO", "Running: "+cmdStr)
+	cmd := pip("install", "--upgrade", name)
+	stdout, _ := cmd.StdoutPipe()
+	cmd.Stderr = cmd.Stdout
+	if err := cmd.Start(); err != nil {
+		emitLog("ERR", err.Error())
+		return err
+	}
+	scanner := bufio.NewScanner(stdout)
+	var outLines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		outLines = append(outLines, line)
+		emitLog("STREAM", line)
+	}
+	err := cmd.Wait()
+	outStr := strings.Join(outLines, "\n")
 	if err != nil {
-		emitLog("ERR", outStr)
-		appendHistory(newEntry("upgrade", name, "", cmd, "failed"))
+		emitLog("ERR", "pip upgrade failed: "+outStr)
+		appendHistory(newEntry("upgrade", name, "", cmdStr, "failed"))
 		return fmt.Errorf("pip upgrade failed: %s", outStr)
 	}
-	emitLog("INFO", outStr)
 	ver := extractInstalledVersion(outStr, name)
-	appendHistory(newEntry("upgrade", name, ver, cmd, "success"))
+	appendHistory(newEntry("upgrade", name, ver, cmdStr, "success"))
 	return nil
 }
 
