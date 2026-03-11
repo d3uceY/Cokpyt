@@ -3,11 +3,8 @@ package pip
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"os/exec"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -27,7 +24,6 @@ type PythonInfo struct {
 	PipVersion    string `json:"pipVersion"`
 }
 
-// httpClient is a shared HTTP client with a timeout for all requests to PyPI.
 var httpClient = &http.Client{Timeout: 10 * time.Second}
 
 // SearchPackages queries the PyPI JSON API for the given package name.
@@ -102,51 +98,36 @@ func fetchExactMatch(name string) ([]SearchResult, error) {
 	}}, nil
 }
 
-var (
-	snippetRe = regexp.MustCompile(`(?s)<a[^>]+class="package-snippet"[^>]*>(.+?)</a>`)
-	nameRe    = regexp.MustCompile(`class="package-snippet__name"[^>]*>([^<]+)<`)
-	versionRe = regexp.MustCompile(`class="package-snippet__version"[^>]*>([^<]+)<`)
-	descRe    = regexp.MustCompile(`class="package-snippet__description"[^>]*>([^<]+)<`)
-)
-
-// fetchSearchResults scrapes pypi.org/search to get up to 20 results for query.
+// fetchSearchResults queries https://pypi.org/search/?q=<query>&o=&c=&format=columns
+// via the PyPI XML search (returns up to 20 results).
 func fetchSearchResults(query string) ([]SearchResult, error) {
-	searchURL := "https://pypi.org/search/?q=" + url.QueryEscape(query)
-	resp, err := httpClient.Get(searchURL)
+	// PyPI has a legacy XMLRPC endpoint we can use for search.
+	xmlBody := fmt.Sprintf(`<?xml version='1.0'?>
+<methodCall>
+<methodName>search</methodName>
+<params>
+<param><value><struct>
+<member><name>name</name><value><string>%s</string></value></member>
+<member><name>summary</name><value><string>%s</string></value></member>
+</struct></value></param>
+<param><value><string>or</string></value></param>
+</params>
+</methodCall>`, query, query)
+
+	req, err := http.NewRequest("POST", "https://pypi.org/pypi", strings.NewReader(xmlBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "text/xml")
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("pypi search status %d", resp.StatusCode)
-	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var results []SearchResult
-	for _, snippet := range snippetRe.FindAllString(string(body), 20) {
-		name := strings.TrimSpace(reFirst(nameRe, snippet))
-		if name == "" {
-			continue
-		}
-		results = append(results, SearchResult{
-			Name:        name,
-			Version:     strings.TrimSpace(reFirst(versionRe, snippet)),
-			Description: strings.TrimSpace(reFirst(descRe, snippet)),
-		})
-	}
-	return results, nil
-}
-
-func reFirst(re *regexp.Regexp, s string) string {
-	m := re.FindStringSubmatch(s)
-	if len(m) < 2 {
-		return ""
-	}
-	return m[1]
+	// Parse the XMLRPC response manually (lightweight, no external deps).
+	return parseXMLRPCSearchResponse(resp)
 }
 
 // GetPythonInfo returns the active Python and pip versions.
