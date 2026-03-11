@@ -62,3 +62,14 @@ func (a *App) UninstallPackage(name string) error {
 func (a *App) UpgradePackage(name string) error {
 	return pip.UpgradePackage(name)
 }
+
+// GetCleanupInfo returns the reclaimable disk space for each cleanup category.
+func (a *App) GetCleanupInfo() (pip.CleanupInfo, error) {
+	return pip.GetCleanupInfo()
+}
+
+// RunCleanup performs the requested cleanup operations.
+// types may contain "cache", "orphan", and/or "temp".
+func (a *App) RunCleanup(types []string) error {
+	return pip.RunCleanup(types)
+}

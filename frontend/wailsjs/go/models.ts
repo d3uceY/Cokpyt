@@ -1,5 +1,21 @@
 export namespace pip {
 	
+	export class CleanupInfo {
+	    cacheSize: string;
+	    eggInfoSize: string;
+	    pycacheSize: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CleanupInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cacheSize = source["cacheSize"];
+	        this.eggInfoSize = source["eggInfoSize"];
+	        this.pycacheSize = source["pycacheSize"];
+	    }
+	}
 	export class OutdatedPackage {
 	    name: string;
 	    version: string;
