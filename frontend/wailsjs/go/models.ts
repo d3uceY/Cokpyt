@@ -2,6 +2,7 @@ export namespace pip {
 	
 	export class AppConfig {
 	    theme: string;
+	    tourSeen: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -10,6 +11,7 @@ export namespace pip {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.theme = source["theme"];
+	        this.tourSeen = source["tourSeen"];
 	    }
 	}
 	export class CleanupInfo {

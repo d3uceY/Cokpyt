@@ -2,7 +2,7 @@ import { useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../components/layout/AppLayout'
 
 export default function Settings() {
-  const { isDark, onToggleTheme } = useOutletContext<AppOutletContext>()
+  const { isDark, onToggleTheme, onStartTour } = useOutletContext<AppOutletContext>()
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -37,7 +37,25 @@ export default function Settings() {
           </div>
         </section>
 
+        {/* Tour */}
+        <section>
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f1723]/40 dark:text-white/40 mb-4">Tour</h3>
+          <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 p-5">
+            <p className="text-sm font-bold mb-1">Guided Tour</p>
+            <p className="text-xs text-[#0f1723]/50 dark:text-white/40 mb-4">
+              Walk through the main features of Cokpit step by step. The tour highlights each section of the sidebar and explains what it does.
+            </p>
+            <button
+              onClick={onStartTour}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0048ad] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#0048ad]/90 transition-colors"
+            >
+              <span className="material-symbols-outlined text-base leading-none">map</span>
+              Start Tour
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   )
 }
+

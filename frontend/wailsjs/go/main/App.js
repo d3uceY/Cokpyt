@@ -50,6 +50,10 @@ export function InstallPackage(arg1) {
   return window['go']['main']['App']['InstallPackage'](arg1);
 }
 
+export function MarkTourSeen() {
+  return window['go']['main']['App']['MarkTourSeen']();
+}
+
 export function RunCleanup(arg1) {
   return window['go']['main']['App']['RunCleanup'](arg1);
 }

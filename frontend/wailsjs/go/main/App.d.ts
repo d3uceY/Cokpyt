@@ -26,6 +26,8 @@ export function Greet(arg1:string):Promise<string>;
 
 export function InstallPackage(arg1:string):Promise<void>;
 
+export function MarkTourSeen():Promise<void>;
+
 export function RunCleanup(arg1:Array<string>):Promise<void>;
 
 export function RunDoctor():Promise<pip.DoctorReport>;

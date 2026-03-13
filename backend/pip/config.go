@@ -8,11 +8,12 @@ import (
 
 // AppConfig holds user-configurable application settings.
 type AppConfig struct {
-	Theme string `json:"theme"` // "light" | "dark"
+	Theme    string `json:"theme"`    // "light" | "dark"
+	TourSeen bool   `json:"tourSeen"` // true once the intro tour has been shown
 }
 
 func defaultConfig() AppConfig {
-	return AppConfig{Theme: "light"}
+	return AppConfig{Theme: "light", TourSeen: false}
 }
 
 func configPath() (string, error) {

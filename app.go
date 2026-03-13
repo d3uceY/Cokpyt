@@ -116,6 +116,13 @@ func (a *App) SetTheme(theme string) error {
 	return pip.SaveConfig(cfg)
 }
 
+// MarkTourSeen marks the intro tour as completed so it does not auto-start again.
+func (a *App) MarkTourSeen() error {
+	cfg, _ := pip.GetConfig()
+	cfg.TourSeen = true
+	return pip.SaveConfig(cfg)
+}
+
 // GetLogs returns all persisted log entries.
 func (a *App) GetLogs() ([]pip.LogEntry, error) {
 	return pip.GetLogs()
