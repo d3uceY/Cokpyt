@@ -1,5 +1,17 @@
 export namespace pip {
 	
+	export class AppConfig {
+	    theme: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.theme = source["theme"];
+	    }
+	}
 	export class CleanupInfo {
 	    cacheSize: string;
 	    eggInfoSize: string;

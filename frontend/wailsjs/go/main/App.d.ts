@@ -8,6 +8,8 @@ export function ClearHistory():Promise<void>;
 
 export function GetCleanupInfo():Promise<pip.CleanupInfo>;
 
+export function GetConfig():Promise<pip.AppConfig>;
+
 export function GetHistory():Promise<Array<pip.HistoryEntry>>;
 
 export function GetInstalledPackages():Promise<Array<pip.PipPackage>>;
@@ -29,6 +31,8 @@ export function RunCleanup(arg1:Array<string>):Promise<void>;
 export function RunDoctor():Promise<pip.DoctorReport>;
 
 export function SearchPackages(arg1:string):Promise<Array<pip.SearchResult>>;
+
+export function SetTheme(arg1:string):Promise<void>;
 
 export function UninstallPackage(arg1:string):Promise<void>;
 

@@ -104,6 +104,18 @@ func (a *App) RunDoctor() pip.DoctorReport {
 	return pip.RunDoctor()
 }
 
+// GetConfig returns the user configuration.
+func (a *App) GetConfig() (pip.AppConfig, error) {
+	return pip.GetConfig()
+}
+
+// SetTheme saves the theme preference ("light" or "dark").
+func (a *App) SetTheme(theme string) error {
+	cfg, _ := pip.GetConfig()
+	cfg.Theme = theme
+	return pip.SaveConfig(cfg)
+}
+
 // GetLogs returns all persisted log entries.
 func (a *App) GetLogs() ([]pip.LogEntry, error) {
 	return pip.GetLogs()

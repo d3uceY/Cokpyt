@@ -14,6 +14,10 @@ export function GetCleanupInfo() {
   return window['go']['main']['App']['GetCleanupInfo']();
 }
 
+export function GetConfig() {
+  return window['go']['main']['App']['GetConfig']();
+}
+
 export function GetHistory() {
   return window['go']['main']['App']['GetHistory']();
 }
@@ -56,6 +60,10 @@ export function RunDoctor() {
 
 export function SearchPackages(arg1) {
   return window['go']['main']['App']['SearchPackages'](arg1);
+}
+
+export function SetTheme(arg1) {
+  return window['go']['main']['App']['SetTheme'](arg1);
 }
 
 export function UninstallPackage(arg1) {
