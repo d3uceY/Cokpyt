@@ -21,7 +21,7 @@ func configPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "Cokpit", "config.json"), nil
+	return filepath.Join(dir, "Cokpyt", "config.json"), nil
 }
 
 // GetConfig reads config.json, creating it with defaults if it does not exist.

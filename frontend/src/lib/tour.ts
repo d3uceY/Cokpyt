@@ -14,7 +14,7 @@ export function startTour(onDone?: () => void): void {
       {
         element: '#tour-sidebar',
         popover: {
-          title: 'Welcome to Cokpit',
+          title: 'Welcome to Cokpyt',
           description: 'Your pip package manager. All pages and tools are accessible from this sidebar — it stays visible on every screen.',
           side: 'right',
           align: 'start',

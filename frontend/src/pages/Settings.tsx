@@ -9,7 +9,7 @@ export default function Settings() {
       <header className="p-8 pb-4 border-b border-black/10 dark:border-white/10">
         <div className="space-y-1">
           <h2 className="text-3xl font-black tracking-tight">Settings</h2>
-          <p className="text-[#0f1723]/50 dark:text-white/50 text-sm">Configure Cokpit preferences and behavior</p>
+          <p className="text-[#0f1723]/50 dark:text-white/50 text-sm">Configure Cokpyt preferences and behavior</p>
         </div>
       </header>
 
@@ -43,7 +43,7 @@ export default function Settings() {
           <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 p-5">
             <p className="text-sm font-bold mb-1">Guided Tour</p>
             <p className="text-xs text-[#0f1723]/50 dark:text-white/40 mb-4">
-              Walk through the main features of Cokpit step by step. The tour highlights each section of the sidebar and explains what it does.
+              Walk through the main features of Cokpyt step by step. The tour highlights each section of the sidebar and explains what it does.
             </p>
             <button
               onClick={onStartTour}

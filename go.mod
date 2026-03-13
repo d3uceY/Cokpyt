@@ -1,4 +1,4 @@
-module Cokpit
+module Cokpyt
 
 go 1.23
 

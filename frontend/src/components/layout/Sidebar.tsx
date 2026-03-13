@@ -32,7 +32,7 @@ export function Sidebar({ isDark, onToggleTheme, updateCount }: SidebarProps) {
           <span className="text-white text-xs font-black tracking-tighter">C</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-black tracking-tighter uppercase leading-none">Cokpit</span>
+          <span className="text-xl font-black tracking-tighter uppercase leading-none">Cokpyt</span>
           <span className="text-[10px] text-[#0048ad] font-bold uppercase tracking-widest">pip manager</span>
         </div>
       </div>
@@ -92,7 +92,7 @@ export function Sidebar({ isDark, onToggleTheme, updateCount }: SidebarProps) {
       <div className="p-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[10px] font-bold text-[#0f1723]/40 dark:text-white/40 uppercase tracking-widest">
           <span className="w-1.5 h-1.5 bg-emerald-500"></span>
-          <span>Cokpit v0.1.0</span>
+          <span>Cokpyt v0.1.0</span>
         </div>
         <button
           onClick={onToggleTheme}

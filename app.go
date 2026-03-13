@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"Cokpit/backend/pip"
+	"Cokpyt/backend/pip"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
