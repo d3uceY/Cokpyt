@@ -2,7 +2,6 @@ package pip
 
 import (
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -21,7 +20,7 @@ func GetPipEnvironmentInfo() (PipEnvironmentInfo, error) {
 	var info PipEnvironmentInfo
 
 	// Python version
-	pyOut, err := exec.Command("python", "--version").CombinedOutput()
+	pyOut, err := python("--version").CombinedOutput()
 	if err == nil {
 		info.PythonVersion = strings.TrimSpace(strings.TrimPrefix(string(pyOut), "Python "))
 	} else {
@@ -36,7 +35,7 @@ func GetPipEnvironmentInfo() (PipEnvironmentInfo, error) {
 	}
 
 	// Python executable path
-	pathOut, _ := exec.Command("python", "-c", "import sys; print(sys.executable)").Output()
+	pathOut, _ := python("-c", "import sys; print(sys.executable)").Output()
 	info.PythonPath = strings.TrimSpace(string(pathOut))
 
 	// Site-packages

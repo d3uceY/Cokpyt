@@ -3,7 +3,6 @@ package pip
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -108,7 +107,7 @@ func pipCacheDir() (string, error) {
 }
 
 func getSitePackages() (string, error) {
-	out, err := exec.Command("python", "-c", "import site; print(site.getsitepackages()[0])").Output()
+	out, err := python("-c", "import site; print(site.getsitepackages()[0])").Output()
 	if err != nil {
 		return "", fmt.Errorf("could not find site-packages: %w", err)
 	}

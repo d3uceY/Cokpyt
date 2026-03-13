@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -134,10 +133,10 @@ func fetchSearchResults(query string) ([]SearchResult, error) {
 func GetPythonInfo() (PythonInfo, error) {
 	var info PythonInfo
 
-	pyOut, err := exec.Command("python", "--version").Output()
+	pyOut, err := python("--version").Output()
 	if err != nil {
 		// try stderr — Python 2 printed to stderr
-		combined, err2 := exec.Command("python", "--version").CombinedOutput()
+		combined, err2 := python("--version").CombinedOutput()
 		if err2 != nil {
 			info.PythonVersion = "unknown"
 		} else {

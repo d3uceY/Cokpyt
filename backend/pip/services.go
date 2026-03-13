@@ -40,7 +40,16 @@ type pipOutdatedEntry struct {
 // pip returns an exec.Cmd that runs python -m pip with the given arguments.
 // Using "python -m pip" ensures pip is found even when it is not on PATH directly.
 func pip(args ...string) *exec.Cmd {
-	return exec.Command("python", append([]string{"-m", "pip"}, args...)...)
+	cmd := exec.Command("python", append([]string{"-m", "pip"}, args...)...)
+	hideWindow(cmd)
+	return cmd
+}
+
+// python returns an exec.Cmd that runs python with the given arguments.
+func python(args ...string) *exec.Cmd {
+	cmd := exec.Command("python", args...)
+	hideWindow(cmd)
+	return cmd
 }
 
 // GetOutdatedPackages returns packages that have a newer version available on PyPI.
