@@ -83,6 +83,17 @@ func appendHistory(e HistoryEntry) {
 	os.WriteFile(path, data, 0o644)
 }
 
+// ClearHistory deletes all recorded history entries.
+func ClearHistory() error {
+	histMu.Lock()
+	defer histMu.Unlock()
+	path, err := historyPath()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte("[]"), 0o644)
+}
+
 func newEntry(action, pkg, version, cmd, status string) HistoryEntry {
 	return HistoryEntry{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),

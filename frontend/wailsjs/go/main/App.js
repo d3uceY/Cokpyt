@@ -6,6 +6,10 @@ export function BatchUninstall(arg1) {
   return window['go']['main']['App']['BatchUninstall'](arg1);
 }
 
+export function ClearHistory() {
+  return window['go']['main']['App']['ClearHistory']();
+}
+
 export function GetCleanupInfo() {
   return window['go']['main']['App']['GetCleanupInfo']();
 }

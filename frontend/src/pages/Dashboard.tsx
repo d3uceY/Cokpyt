@@ -1,4 +1,4 @@
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { GetInstalledPackages, GetOutdatedPackages, GetPythonInfo, GetHistory, UpgradePackage } from '../../wailsjs/go/main/App'
 import type { AppOutletContext } from '../components/layout/AppLayout'
@@ -12,6 +12,7 @@ const statusBadge: Record<string, string> = {
 export default function Dashboard() {
   const { setUpdateCount } = useOutletContext<AppOutletContext>()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [upgradingAll, setUpgradingAll] = useState(false)
 
   const { data: packages = [], isLoading: loadingPkgs } = useQuery({
@@ -169,7 +170,7 @@ export default function Dashboard() {
           <div className="xl:col-span-2 border border-black/15 dark:border-white/10 bg-white dark:bg-white/5">
             <div className="p-4 border-b border-black/10 dark:border-white/10 flex justify-between items-center">
               <h2 className="text-sm font-black uppercase tracking-widest">Recent Activity</h2>
-              <button className="text-[10px] font-bold uppercase text-[#0048ad] hover:underline">View All History</button>
+              <button onClick={() => navigate('/history')} className="text-[10px] font-bold uppercase text-[#0048ad] hover:underline">View All History</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">

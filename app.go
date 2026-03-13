@@ -89,6 +89,11 @@ func (a *App) GetHistory() ([]pip.HistoryEntry, error) {
 	return pip.GetHistory()
 }
 
+// ClearHistory deletes all recorded pip operation history.
+func (a *App) ClearHistory() error {
+	return pip.ClearHistory()
+}
+
 // GetPipEnvironmentInfo returns the full Python runtime environment details.
 func (a *App) GetPipEnvironmentInfo() (pip.PipEnvironmentInfo, error) {
 	return pip.GetPipEnvironmentInfo()

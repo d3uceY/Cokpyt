@@ -4,6 +4,8 @@ import {pip} from '../models';
 
 export function BatchUninstall(arg1:Array<string>):Promise<Record<string, string>>;
 
+export function ClearHistory():Promise<void>;
+
 export function GetCleanupInfo():Promise<pip.CleanupInfo>;
 
 export function GetHistory():Promise<Array<pip.HistoryEntry>>;
