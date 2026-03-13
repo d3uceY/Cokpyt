@@ -179,7 +179,7 @@ export default function Search() {
                             ) : (
                               <>
                                 <span className="material-symbols-outlined text-sm">download</span>
-                                pip install
+                                 install
                               </>
                             )}
                           </button>
