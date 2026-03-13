@@ -82,10 +82,6 @@ export default function Dashboard() {
       <header className="h-16 border-b border-black/10 dark:border-white/10 flex items-center justify-between px-8 bg-[#f5f7f8] dark:bg-[#0f1723] sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-black tracking-tight uppercase">Overview</h1>
-          <div className="flex items-center gap-2 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-            <span className="w-1.5 h-1.5 bg-emerald-500 animate-pulse"></span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">PyPI Reachable</span>
-          </div>
         </div>
         <div className="flex items-center gap-3">
           <button
