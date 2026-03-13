@@ -37,23 +37,6 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Danger Zone */}
-        <section>
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">Danger Zone</h3>
-          <div className="border border-red-400/30 dark:border-red-500/20 bg-white dark:bg-white/5 p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold">Reset All Settings</p>
-                <p className="text-xs text-[#0f1723]/50 dark:text-white/50 mt-0.5">Restore all preferences to factory defaults</p>
-              </div>
-              <button className="px-4 py-1.5 border border-red-400/50 dark:border-red-500/30 text-red-500 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                Reset
-              </button>
-            </div>
-          </div>
-        </section>
-
-
       </div>
     </div>
   )
