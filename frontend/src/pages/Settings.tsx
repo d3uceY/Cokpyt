@@ -1,23 +1,8 @@
-import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../components/layout/AppLayout'
 
-interface SettingToggle {
-  id: string
-  label: string
-  description: string
-  value: boolean
-}
-
 export default function Settings() {
   const { isDark, onToggleTheme } = useOutletContext<AppOutletContext>()
-  const [toggles, setToggles] = useState<SettingToggle[]>([
-    { id: 'auto-update-check', label: 'Automatic Update Checks', description: 'Check for package updates on startup', value: true },
-    { id: 'silent-install', label: 'Silent Installs', description: 'Run installations without interactive prompts', value: true },
-  ])
-
-  const toggle = (id: string) =>
-    setToggles((prev) => prev.map((t) => (t.id === id ? { ...t, value: !t.value } : t)))
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -52,74 +37,6 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Behavior */}
-        <section>
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f1723]/40 dark:text-white/40 mb-4">Behavior</h3>
-          <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 divide-y divide-black/10 dark:divide-white/10">
-            {toggles.map((t) => (
-              <div key={t.id} className="flex items-center justify-between p-5">
-                <div>
-                  <p className="text-sm font-bold">{t.label}</p>
-                  <p className="text-xs text-[#0f1723]/50 dark:text-white/50 mt-0.5">{t.description}</p>
-                </div>
-                <button
-                  onClick={() => toggle(t.id)}
-                  className={`relative w-10 h-5 transition-colors flex-shrink-0 ${
-                    t.value ? 'bg-[#0048ad]' : 'bg-black/20 dark:bg-white/20'
-                  }`}
-                  role="switch"
-                  aria-checked={t.value}
-                >
-                  <span
-                    className={`absolute top-0.5 w-4 h-4 bg-white shadow transition-transform ${
-                      t.value ? 'translate-x-5' : 'translate-x-0.5'
-                    }`}
-                  />
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* pip Configuration */}
-        <section>
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-[#0f1723]/40 dark:text-white/40 mb-4">pip Configuration</h3>
-          <div className="border border-black/15 dark:border-white/10 bg-white dark:bg-white/5 p-5 space-y-4">
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-[#0f1723]/50 dark:text-white/40 block mb-2">
-                Index URL
-              </label>
-              <input
-                type="text"
-                defaultValue="https://pypi.org/simple"
-                className="w-full h-9 px-3 bg-[#f5f7f8] dark:bg-white/5 border border-black/15 dark:border-white/10 text-sm focus:outline-none focus:ring-1 focus:ring-[#0048ad]"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-[#0f1723]/50 dark:text-white/40 block mb-2">
-                Trusted Hosts
-              </label>
-              <input
-                type="text"
-                defaultValue="pypi.org files.pythonhosted.org"
-                className="w-full h-9 px-3 bg-[#f5f7f8] dark:bg-white/5 border border-black/15 dark:border-white/10 text-sm focus:outline-none focus:ring-1 focus:ring-[#0048ad]"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-[#0f1723]/50 dark:text-white/40 block mb-2">
-                Default Timeout (seconds)
-              </label>
-              <input
-                type="number"
-                defaultValue={15}
-                min={5}
-                max={120}
-                className="w-full h-9 px-3 bg-[#f5f7f8] dark:bg-white/5 border border-black/15 dark:border-white/10 text-sm focus:outline-none focus:ring-1 focus:ring-[#0048ad]"
-              />
-            </div>
-          </div>
-        </section>
-
         {/* Danger Zone */}
         <section>
           <h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">Danger Zone</h3>
@@ -136,11 +53,7 @@ export default function Settings() {
           </div>
         </section>
 
-        <div className="pt-2">
-          <button className="px-6 py-2 bg-[#0048ad] text-white text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all">
-            Save Changes
-          </button>
-        </div>
+
       </div>
     </div>
   )

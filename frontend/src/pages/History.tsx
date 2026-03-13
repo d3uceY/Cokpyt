@@ -185,8 +185,11 @@ export default function History() {
                     </tr>
                     {expandedId === entry.id && (
                       <tr key={`${entry.id}-expand`}>
-                        <td colSpan={6} className="px-6 py-3 bg-black/3 dark:bg-white/3 border-t border-black/5 dark:border-white/5">
-                          <code className="text-xs font-mono text-[#0048ad]">{entry.command}</code>
+                        <td colSpan={6} className="px-6 py-3 bg-[#0f1723] dark:bg-black/40 border-t border-black/10 dark:border-white/10">
+                          <div className="flex items-center gap-2">
+                            <span className="flex-shrink-0 px-1.5 py-0.5 bg-[#0048ad]/20 text-[#0048ad] dark:bg-[#0048ad]/30 dark:text-blue-300 text-[10px] font-black uppercase tracking-widest border border-[#0048ad]/30">CMD</span>
+                            <code className="text-xs font-mono text-white/90 tracking-wide">{entry.command}</code>
+                          </div>
                         </td>
                       </tr>
                     )}
