@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { GetHistory, ClearHistory } from '../../wailsjs/go/main/App'
+import type { pip } from '../../wailsjs/go/models'
 
 const actionStyles = {
   install:   'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400',
@@ -18,7 +19,7 @@ export default function History() {
   const [confirmClear, setConfirmClear] = useState(false)
   const [clearing, setClearing] = useState(false)
 
-  const { data: history = [], isLoading: loading } = useQuery({
+  const { data: history = [], isLoading: loading } = useQuery<pip.HistoryEntry[]>({
     queryKey: ['history'],
     queryFn: () => GetHistory(),
     staleTime: 0,

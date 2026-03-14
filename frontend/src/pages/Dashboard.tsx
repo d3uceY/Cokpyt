@@ -1,6 +1,7 @@
 import { useOutletContext, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { GetInstalledPackages, GetOutdatedPackages, GetPythonInfo, GetHistory, UpgradePackage } from '../../wailsjs/go/main/App'
+import type { pip } from '../../wailsjs/go/models'
 import type { AppOutletContext } from '../components/layout/AppLayout'
 import { useEffect, useState } from 'react'
 
@@ -15,25 +16,25 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [upgradingAll, setUpgradingAll] = useState(false)
 
-  const { data: packages = [], isLoading: loadingPkgs } = useQuery({
+  const { data: packages = [], isLoading: loadingPkgs } = useQuery<pip.PipPackage[]>({
     queryKey: ['installed-packages'],
     queryFn: () => GetInstalledPackages(),
     staleTime: 0,
   })
 
-  const { data: outdated = [], isLoading: loadingOutdated } = useQuery({
+  const { data: outdated = [], isLoading: loadingOutdated } = useQuery<pip.OutdatedPackage[]>({
     queryKey: ['outdated-packages'],
     queryFn: () => GetOutdatedPackages(),
     staleTime: 0,
   })
 
-  const { data: pythonInfo = null, isLoading: loadingInfo } = useQuery({
+  const { data: pythonInfo = null, isLoading: loadingInfo } = useQuery<pip.PythonInfo | null>({
     queryKey: ['python-info'],
     queryFn: () => GetPythonInfo(),
     staleTime: 60_000,
   })
 
-  const { data: historyData = [], isLoading: loadingHistory } = useQuery({
+  const { data: historyData = [], isLoading: loadingHistory } = useQuery<pip.HistoryEntry[]>({
     queryKey: ['history'],
     queryFn: () => GetHistory(),
     staleTime: 0,
@@ -70,7 +71,6 @@ export default function Dashboard() {
   const total = outdated.length || 1
   const majorPct = Math.round((majorCount / total) * 100)
   const minorPct = Math.round((minorCount / total) * 100)
-  const patchPct = 100 - majorPct - minorPct
 
   const Skeleton = ({ className }: { className?: string }) => (
     <div className={`animate-pulse bg-black/10 dark:bg-white/10 ${className ?? ''}`} />
