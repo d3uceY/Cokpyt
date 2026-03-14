@@ -4,7 +4,6 @@ import type { pip } from '../../wailsjs/go/models'
 
 const indexSources = [
   { name: 'pypi', url: 'https://pypi.org/simple', trusted: true },
-  { name: 'files.pythonhosted.org', url: 'https://files.pythonhosted.org', trusted: true },
 ]
 
 export default function PackageManagers() {
