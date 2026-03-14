@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cokpyt"
+version = "0.1.1"
+description = "A desktop GUI for pip — browse, install, upgrade, and remove packages without touching the terminal."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+authors = [
+    { name = "d3uceY", url = "https://github.com/d3uceY" },
+]
+keywords = ["pip", "pypi", "gui", "package-manager", "desktop", "packages", "cokpyt"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: System :: Software Distribution",
+    "Topic :: System :: Installation/Setup",
+    "Intended Audience :: Developers",
+]
+
+[project.urls]
+Homepage = "https://github.com/d3uceY/Cokpyt"
+Repository = "https://github.com/d3uceY/Cokpyt"
+"Bug Tracker" = "https://github.com/d3uceY/Cokpyt/issues"
+Releases = "https://github.com/d3uceY/Cokpyt/releases"
+
+[project.scripts]
+cokpyt = "cokpyt.installer:main"
