@@ -56,9 +56,20 @@ ManifestDPIAware true
 !define MUI_FINISHPAGE_NOAUTOCLOSE # Wait on the INSTFILES page so the user can take a look into the details of the installation steps
 !define MUI_ABORTWARNING # This will warn the user if they exit from the installer.
 
+# Finish page: offer to launch the app (so the user can then pin it to the taskbar)
+!define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT_EXECUTABLE}"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch ${INFO_PRODUCTNAME} now"
+!define MUI_FINISHPAGE_SHOWREADME ""
+!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
+!define MUI_FINISHPAGE_SHOWREADME_TEXT "To pin to taskbar: launch the app, right-click its taskbar icon, and choose 'Pin to taskbar'"
+
+# Component page descriptions
+!define MUI_COMPONENTSPAGE_SMALLDESC
+
 !insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
 # !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
 !insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
+!insertmacro MUI_PAGE_COMPONENTS # Optional components page.
 !insertmacro MUI_PAGE_INSTFILES # Installing page.
 !insertmacro MUI_PAGE_FINISH # Finished installation page.
 
@@ -79,7 +90,8 @@ Function .onInit
    !insertmacro wails.checkArchitecture
 FunctionEnd
 
-Section
+Section "${INFO_PRODUCTNAME}" SecMain
+    SectionIn RO # Required — cannot be deselected
     !insertmacro wails.setShellContext
 
     !insertmacro wails.webview2runtime
@@ -88,14 +100,30 @@ Section
 
     !insertmacro wails.files
 
-    CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
-    CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
-
     !insertmacro wails.associateFiles
     !insertmacro wails.associateCustomProtocols
 
     !insertmacro wails.writeUninstaller
 SectionEnd
+
+Section "Start Menu shortcut" SecStartMenu
+    CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+SectionEnd
+
+Section /o "Desktop shortcut" SecDesktop
+    CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+SectionEnd
+
+Section /o "Launch at Windows startup" SecStartup
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${INFO_PRODUCTNAME}" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+SectionEnd
+
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecMain}      "Core application files (required)."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenu} "Add a shortcut to the Start Menu."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop}   "Add a shortcut to your Desktop."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecStartup}   "Automatically launch ${INFO_PRODUCTNAME} when Windows starts."
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Section "uninstall"
     !insertmacro wails.setShellContext
@@ -106,6 +134,8 @@ Section "uninstall"
 
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
+
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${INFO_PRODUCTNAME}"
 
     !insertmacro wails.unassociateFiles
     !insertmacro wails.unassociateCustomProtocols
