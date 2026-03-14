@@ -29,11 +29,11 @@ export function Sidebar({ isDark, onToggleTheme, updateCount, version }: Sidebar
     <aside id="tour-sidebar" className="w-64 border-r border-black/10 dark:border-white/10 bg-[#f5f7f8] dark:bg-[#0f1723] flex flex-col fixed h-full z-10">
       {/* Brand */}
       <div className="p-6 flex items-center gap-3 border-b border-black/10 dark:border-white/10">
-        <div className="w-8 h-8 bg-[#0048ad] flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-xs font-black tracking-tighter">C</span>
+        <div className='w-12 h-12'>
+          <img src={isDark ? 'logo-dark.png' : 'logo-light.png'} alt="" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-black tracking-tighter uppercase leading-none">Cokpyt</span>
+          <span className="text-xl font-black tracking-tighter capitalize leading-none">Cokpyt</span>
           <span className="text-[10px] text-[#0048ad] font-bold uppercase tracking-widest">pip manager</span>
         </div>
       </div>
