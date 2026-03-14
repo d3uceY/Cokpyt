@@ -1,7 +1,5 @@
 <div align="center">
-
 <img src="readme/asssets/appicon.png" alt="Cokpyt icon" width="96" />
-
 <h1><strong>Cokpyt</strong></h1>
 <p><em>A desktop GUI for pip. Because life is too short for the terminal.</em></p>
 
