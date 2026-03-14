@@ -37,9 +37,9 @@ Grab the latest installer for your platform below.
 
 | Platform | Download |
 |----------|----------|
-| **Windows** (x64) | [![Download for Windows](https://img.shields.io/badge/Download-Windows%20Installer-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-windows-amd64-installer.exe) |
-| **macOS** (Universal) | [![Download for macOS](https://img.shields.io/badge/Download-macOS%20dmg-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-darwin-universal.dmg) |
-| **Linux** (x64) | [![Download for Linux](https://img.shields.io/badge/Download-Linux%20AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-linux-amd64.AppImage) |
+| **Windows** (x64) | [![Download for Windows](https://img.shields.io/badge/Download-Windows%20Installer-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-windows-installer.exe) |
+| **macOS** (Universal) | [![Download for macOS](https://img.shields.io/badge/Download-macOS%20zip-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-macos-amd64.zip) |
+| **Linux** (x64) | [![Download for Linux](https://img.shields.io/badge/Download-Linux%20binary-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-linux-amd64) |
 
 Or browse all releases and release notes on the [Releases page](https://github.com/d3uceY/Cokpit/releases).
 
