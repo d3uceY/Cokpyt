@@ -3,10 +3,10 @@
 <h1><strong>Cokpyt</strong></h1>
 <p><em>A desktop GUI for pip. Because life is too short for the terminal.</em></p>
 
-[![Latest Release](https://img.shields.io/github/v/release/d3uceY/Cokpit?label=latest&style=for-the-badge&color=0048ad)](https://github.com/d3uceY/Cokpit/releases/latest)
-[![Windows](https://img.shields.io/badge/Windows-supported-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/d3uceY/Cokpit/releases/latest)
-[![macOS](https://img.shields.io/badge/macOS-supported-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/d3uceY/Cokpit/releases/latest)
-[![Linux](https://img.shields.io/badge/Linux-supported-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/d3uceY/Cokpit/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/d3uceY/Cokpyt?label=latest&style=for-the-badge&color=0048ad)](https://github.com/d3uceY/Cokpyt/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-supported-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/d3uceY/Cokpyt/releases/latest)
+[![macOS](https://img.shields.io/badge/macOS-supported-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/d3uceY/Cokpyt/releases/latest)
+[![Linux](https://img.shields.io/badge/Linux-supported-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/d3uceY/Cokpyt/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
 <br />
@@ -35,11 +35,11 @@ Grab the latest installer for your platform below.
 
 | Platform | Download |
 |----------|----------|
-| **Windows** (x64) | [![Download for Windows](https://img.shields.io/badge/Download-Windows%20Installer-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-windows-installer.exe) |
-| **macOS** (Universal) | [![Download for macOS](https://img.shields.io/badge/Download-macOS%20zip-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-macos-amd64.zip) |
-| **Linux** (x64) | [![Download for Linux](https://img.shields.io/badge/Download-Linux%20binary-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-linux-amd64) |
+| **Windows** (x64) | [![Download for Windows](https://img.shields.io/badge/Download-Windows%20Installer-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-windows-installer.exe) |
+| **macOS** (Universal) | [![Download for macOS](https://img.shields.io/badge/Download-macOS%20zip-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-macos-amd64.zip) |
+| **Linux** (x64) | [![Download for Linux](https://img.shields.io/badge/Download-Linux%20binary-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-linux-amd64) |
 
-Or browse all releases and release notes on the [Releases page](https://github.com/d3uceY/Cokpit/releases).
+Or browse all releases and release notes on the [Releases page](https://github.com/d3uceY/Cokpyt/releases).
 
 ---
 
