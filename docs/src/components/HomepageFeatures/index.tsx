@@ -1,17 +1,14 @@
 import type {ReactNode} from 'react';
-import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './styles.module.css';
 
 type FeatureItem = {
   title: string;
-  img: string;
   description: ReactNode;
 };
 
 const FeatureList: FeatureItem[] = [
   {
     title: 'Full pip Control — No Terminal Required',
-    img: '/img/full_pip_control_tagline.png',
     description: (
       <>
         Install, upgrade, and uninstall packages from a clean table view. Filter
@@ -22,7 +19,6 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'Instant PyPI Search & Health Checks',
-    img: '/img/instant_pypi_search_tagline.png',
     description: (
       <>
         Query the entire PyPI index in real time and install any result
@@ -34,7 +30,6 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'History, Logs & Cleanup — Built In',
-    img: '/img/history_logs_cleanup_tagline.png',
     description: (
       <>
         Every action is logged with a timestamp and exit status so you always
@@ -46,13 +41,9 @@ const FeatureList: FeatureItem[] = [
   },
 ];
 
-function Feature({title, img, description}: FeatureItem) {
-  const imgUrl = useBaseUrl(img);
+function Feature({title, description}: FeatureItem) {
   return (
     <div className={styles.featureCard}>
-      <div className={styles.featureImageWrap}>
-        <img src={imgUrl} alt={title} className={styles.featureImage} />
-      </div>
       <div className={styles.featureBody}>
         <h3 className={styles.featureTitle}>{title}</h3>
         <p className={styles.featureDesc}>{description}</p>

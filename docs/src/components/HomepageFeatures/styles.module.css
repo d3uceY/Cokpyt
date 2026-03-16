@@ -29,19 +29,6 @@
   transform: translate(3px, 3px);
 }
 
-.featureImageWrap {
-  border-bottom: 3px solid #0048ad;
-  overflow: hidden;
-  background: #0f1723;
-  line-height: 0;
-}
-
-.featureImage {
-  width: 100%;
-  display: block;
-  object-fit: cover;
-}
-
 .featureBody {
   padding: 1.5rem;
   display: flex;
