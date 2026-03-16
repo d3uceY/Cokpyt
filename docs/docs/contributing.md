@@ -10,7 +10,7 @@ Contributions to Cokpyt are very welcome — whether that is a bug report, a fea
 
 ## Reporting Bugs
 
-Before opening an issue, check whether it has already been reported on the [Issues page](https://github.com/d3uceY/Cokpit/issues).
+Before opening an issue, check whether it has already been reported on the [Issues page](https://github.com/d3uceY/Cokpyt/issues).
 
 When filing a new bug report, please include:
 
@@ -50,8 +50,8 @@ go install github.com/wailsapp/wails/v2/cmd/wails@latest
 ### Clone and Run
 
 ```bash
-git clone https://github.com/d3uceY/Cokpit.git
-cd Cokpit
+git clone https://github.com/d3uceY/Cokpyt.git
+cd Cokpyt
 
 # Install frontend dependencies
 cd frontend && npm install && cd ..
@@ -78,7 +78,7 @@ wails build --target linux/amd64
 ## Project Structure
 
 ```
-Cokpit/
+Cokpyt/
   app.go                  — Wails app lifecycle and method bindings
   main.go                 — Entry point
   backend/

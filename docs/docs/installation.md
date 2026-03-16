@@ -15,11 +15,11 @@ Grab the latest release for your platform from the table below.
 
 | Platform | Download |
 |----------|----------|
-| **Windows** (x64) | [Download Windows Installer](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-windows-installer.exe) |
-| **macOS** (Universal) | [Download macOS .zip](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-macos-amd64.zip) |
-| **Linux** (x64) | [Download Linux binary](https://github.com/d3uceY/Cokpit/releases/latest/download/Cokpyt-linux-amd64) |
+| **Windows** (x64) | [Download Windows Installer](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-windows-installer.exe) |
+| **macOS** (Universal) | [Download macOS .zip](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-macos-amd64.zip) |
+| **Linux** (x64) | [Download Linux binary](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-linux-amd64) |
 
-Browse all release notes and older versions on the [Releases page](https://github.com/d3uceY/Cokpit/releases).
+Browse all release notes and older versions on the [Releases page](https://github.com/d3uceY/Cokpyt/releases).
 
 ### Windows
 

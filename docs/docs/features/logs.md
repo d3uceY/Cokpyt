@@ -42,7 +42,7 @@ The **live terminal panel** that slides up during installs and upgrades shows th
 
 - **Debugging a failed install** — look for `ERROR` entries and read the full pip traceback.
 - **Verifying what ran** — confirm the exact pip command and flags that were used.
-- **Reporting a bug** — copy the relevant log entries into a [GitHub issue](https://github.com/d3uceY/Cokpit/issues) to help with diagnosis.
+- **Reporting a bug** — copy the relevant log entries into a [GitHub issue](https://github.com/d3uceY/Cokpyt/issues) to help with diagnosis.
 
 ---
 

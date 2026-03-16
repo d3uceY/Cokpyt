@@ -23,7 +23,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'd3uceY', // Usually your GitHub org/user name.
-  projectName: 'Cokpit', // Usually your repo name.
+  projectName: 'Cokpyt', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -44,7 +44,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/d3uceY/Cokpit/tree/main/docs/',
+            'https://github.com/d3uceY/Cokpyt/tree/main/docs/',
         },
         blog: {
           showReadingTime: true,
@@ -55,7 +55,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/d3uceY/Cokpit/tree/main/docs/',
+            'https://github.com/d3uceY/Cokpyt/tree/main/docs/',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -89,7 +89,7 @@ const config: Config = {
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
-          href: 'https://github.com/d3uceY/Cokpit',
+          href: 'https://github.com/d3uceY/Cokpyt',
           label: 'GitHub',
           position: 'right',
         },
@@ -120,15 +120,15 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/d3uceY/Cokpit',
+              href: 'https://github.com/d3uceY/Cokpyt',
             },
             {
               label: 'Releases',
-              href: 'https://github.com/d3uceY/Cokpit/releases',
+              href: 'https://github.com/d3uceY/Cokpyt/releases',
             },
             {
               label: 'Issues',
-              href: 'https://github.com/d3uceY/Cokpit/issues',
+              href: 'https://github.com/d3uceY/Cokpyt/issues',
             },
           ],
         },
