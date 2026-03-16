@@ -1,18 +1,17 @@
 import type {ReactNode} from 'react';
-import clsx from 'clsx';
-import Heading from '@theme/Heading';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './styles.module.css';
 
 type FeatureItem = {
   title: string;
-  Svg: React.ComponentType<React.ComponentProps<'svg'>>;
+  img: string;
   description: ReactNode;
 };
 
 const FeatureList: FeatureItem[] = [
   {
     title: 'Full pip Control — No Terminal Required',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    img: '/img/full_pip_control_tagline.png',
     description: (
       <>
         Install, upgrade, and uninstall packages from a clean table view. Filter
@@ -23,7 +22,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'Instant PyPI Search & Health Checks',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    img: '/img/instant_pypi_search_tagline.png',
     description: (
       <>
         Query the entire PyPI index in real time and install any result
@@ -35,7 +34,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'History, Logs & Cleanup — Built In',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    img: '/img/history_logs_cleanup_tagline.png',
     description: (
       <>
         Every action is logged with a timestamp and exit status so you always
@@ -47,15 +46,16 @@ const FeatureList: FeatureItem[] = [
   },
 ];
 
-function Feature({title, Svg, description}: FeatureItem) {
+function Feature({title, img, description}: FeatureItem) {
+  const imgUrl = useBaseUrl(img);
   return (
-    <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
+    <div className={styles.featureCard}>
+      <div className={styles.featureImageWrap}>
+        <img src={imgUrl} alt={title} className={styles.featureImage} />
       </div>
-      <div className="text--center padding-horiz--md">
-        <Heading as="h3">{title}</Heading>
-        <p>{description}</p>
+      <div className={styles.featureBody}>
+        <h3 className={styles.featureTitle}>{title}</h3>
+        <p className={styles.featureDesc}>{description}</p>
       </div>
     </div>
   );
@@ -64,12 +64,10 @@ function Feature({title, Svg, description}: FeatureItem) {
 export default function HomepageFeatures(): ReactNode {
   return (
     <section className={styles.features}>
-      <div className="container">
-        <div className="row">
-          {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} />
-          ))}
-        </div>
+      <div className={styles.featuresInner}>
+        {FeatureList.map((props, idx) => (
+          <Feature key={idx} {...props} />
+        ))}
       </div>
     </section>
   );

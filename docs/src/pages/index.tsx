@@ -1,28 +1,36 @@
 import type {ReactNode} from 'react';
-import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
-import Heading from '@theme/Heading';
 
 import styles from './index.module.css';
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
+  const logoUrl = useBaseUrl('/img/logo.png');
+  const heroUrl = useBaseUrl('/img/hero.png');
   return (
-    <header className={clsx('hero hero--primary', styles.heroBanner)}>
-      <div className="container">
-        <Heading as="h1" className="hero__title">
-          {siteConfig.title}
-        </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div className={styles.buttons}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/intro">
-            Get Started →
-          </Link>
+    <header className={styles.heroBanner}>
+      <div className={styles.heroInner}>
+        <div className={styles.heroText}>
+          <div className={styles.heroLockup}>
+            <img src={logoUrl} alt="Cokpyt" className={styles.heroLogo} />
+            <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
+          </div>
+          <p className={styles.heroSubtitle}>{siteConfig.tagline}</p>
+          <div className={styles.buttons}>
+            <Link className={styles.ctaButton} to="/docs/intro">
+              Get Started →
+            </Link>
+            <Link className={styles.ctaButtonOutline} to="/docs/features/dashboard">
+              See Features
+            </Link>
+          </div>
+        </div>
+        <div className={styles.heroImageWrap}>
+          <img src={heroUrl} alt="Cokpyt app screenshot" className={styles.heroImage} />
         </div>
       </div>
     </header>

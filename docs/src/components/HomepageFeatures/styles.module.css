@@ -1,11 +1,79 @@
+/* Swiss Brutalist feature cards — Cokpyt brand theme */
+
 .features {
-  display: flex;
-  align-items: center;
-  padding: 2rem 0;
-  width: 100%;
+  background: #f5f7f8;
+  border-top: 4px solid #0048ad;
+  padding: 5rem 0;
 }
 
-.featureSvg {
-  height: 200px;
-  width: 200px;
+.featuresInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.featureCard {
+  border: 3px solid #0048ad;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 7px 7px 0 #0048ad;
+  transition: box-shadow 0.12s, transform 0.12s;
+}
+
+.featureCard:hover {
+  box-shadow: 4px 4px 0 #0048ad;
+  transform: translate(3px, 3px);
+}
+
+.featureImageWrap {
+  border-bottom: 3px solid #0048ad;
+  overflow: hidden;
+  background: #0f1723;
+  line-height: 0;
+}
+
+.featureImage {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.featureBody {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.featureTitle {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #0f1723;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.featureDesc {
+  font-size: 0.9rem;
+  color: #4a5568;
+  line-height: 1.65;
+  margin: 0;
+}
+
+@media screen and (max-width: 996px) {
+  .featuresInner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .featureCard {
+    box-shadow: 5px 5px 0 #0048ad;
+  }
 }
