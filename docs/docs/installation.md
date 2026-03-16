@@ -5,7 +5,7 @@ sidebar_position: 2
 # Installation
 
 Cokpyt ships as a self-contained native binary and also as a companion `pip` package.  
-I would recommend the native binary for most users, but the `pip` package option is a little bit buggy
+I would recommend the native binary for most users because the `pip` package option is a little bit buggy
 
 ---
 
