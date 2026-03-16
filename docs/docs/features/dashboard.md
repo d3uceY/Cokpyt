@@ -10,7 +10,7 @@ The **Dashboard** (labelled *Overview* inside the app) is the first page you see
 A full-resolution screenshot of the Dashboard will be added here. In the meantime, see the hero image on the [Introduction](../intro) page for a preview of the overall UI.
 :::
 
-![Dashboard overview placeholder](pathname:///img/placeholder-dashboard.png)
+![Dashboard overview placeholder](/img/dashboard.png)
 
 ---
 
