@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cokpyt"
-version = "0.1.2"
+version = "0.1.3"
 description = "A desktop GUI for pip — browse, install, upgrade, and remove packages without touching the terminal."
 readme = "README.md"
 license = { text = "MIT" }
