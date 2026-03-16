@@ -39,6 +39,16 @@ const FeatureList: FeatureItem[] = [
       </>
     ),
   },
+  {
+    title: 'Virtual Environment Manager',
+    description: (
+      <>
+        Register, switch, and scan for Python virtual environments without
+        leaving the app. Every package operation — installs, upgrades,
+        uninstalls — runs against whichever <code>venv</code> is active.
+      </>
+    ),
+  },
 ];
 
 function Feature({title, description}: FeatureItem) {

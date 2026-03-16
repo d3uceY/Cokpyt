@@ -11,7 +11,7 @@
   margin: 0 auto;
   padding: 0 2.5rem;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 2rem;
 }
 
@@ -54,10 +54,16 @@
   margin: 0;
 }
 
-@media screen and (max-width: 996px) {
+@media screen and (max-width: 1100px) {
+  .featuresInner {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 600px) {
   .featuresInner {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
   .featureCard {
