@@ -6,14 +6,22 @@ import (
 	"path/filepath"
 )
 
+// VenvEntry represents a saved Python virtual environment.
+type VenvEntry struct {
+	Name string `json:"name"` // display name, defaults to directory name
+	Path string `json:"path"` // absolute path to the venv root
+}
+
 // AppConfig holds user-configurable application settings.
 type AppConfig struct {
-	Theme    string `json:"theme"`    // "light" | "dark"
-	TourSeen bool   `json:"tourSeen"` // true once the intro tour has been shown
+	Theme        string      `json:"theme"`        // "light" | "dark"
+	TourSeen     bool        `json:"tourSeen"`     // true once the intro tour has been shown
+	ActiveEnv    string      `json:"activeEnv"`    // path to active venv; "" means system python
+	Environments []VenvEntry `json:"environments"` // all saved venv entries
 }
 
 func defaultConfig() AppConfig {
-	return AppConfig{Theme: "light", TourSeen: false}
+	return AppConfig{Theme: "light", TourSeen: false, ActiveEnv: "", Environments: []VenvEntry{}}
 }
 
 func configPath() (string, error) {

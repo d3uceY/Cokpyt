@@ -41,19 +41,19 @@ type pipOutdatedEntry struct {
 	LatestFileType string `json:"latest_filetype"`
 }
 
-// pip returns an exec.Cmd that runs python -m pip with the given arguments.
+// pip returns an exec.Cmd that runs the active environment's python -m pip with the given arguments.
 // Using "python -m pip" ensures pip is found even when it is not on PATH directly.
 // --disable-pip-version-check suppresses pip's self-update notification UI.
 func pip(args ...string) *exec.Cmd {
 	allArgs := append([]string{"-m", "pip", "--disable-pip-version-check"}, args...)
-	cmd := exec.Command("python", allArgs...)
+	cmd := exec.Command(getPythonExe(), allArgs...)
 	hideWindow(cmd)
 	return cmd
 }
 
-// python returns an exec.Cmd that runs python with the given arguments.
+// python returns an exec.Cmd that runs the active environment's python with the given arguments.
 func python(args ...string) *exec.Cmd {
-	cmd := exec.Command("python", args...)
+	cmd := exec.Command(getPythonExe(), args...)
 	hideWindow(cmd)
 	return cmd
 }

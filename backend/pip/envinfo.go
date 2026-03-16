@@ -42,8 +42,11 @@ func GetPipEnvironmentInfo() (PipEnvironmentInfo, error) {
 	sp, _ := getSitePackages()
 	info.SitePackages = sp
 
-	// Virtual environment
-	if venv := os.Getenv("VIRTUAL_ENV"); venv != "" {
+	// Virtual environment — prefer the app's own active-env setting over the VIRTUAL_ENV var.
+	if cfg, err := GetConfig(); err == nil && cfg.ActiveEnv != "" {
+		info.VenvActive = true
+		info.VenvPath = cfg.ActiveEnv
+	} else if venv := os.Getenv("VIRTUAL_ENV"); venv != "" {
 		info.VenvActive = true
 		info.VenvPath = venv
 	}

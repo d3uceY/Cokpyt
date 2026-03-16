@@ -143,3 +143,37 @@ func (a *App) BatchUninstall(names []string) map[string]string {
 	}
 	return errs
 }
+
+// ListEnvironments returns all saved virtual environments from config.
+func (a *App) ListEnvironments() ([]pip.VenvEntry, error) {
+	return pip.ListEnvironments()
+}
+
+// AddEnvironment validates and saves a new virtual environment entry.
+func (a *App) AddEnvironment(name, path string) error {
+	return pip.AddEnvironment(name, path)
+}
+
+// RemoveEnvironment removes a saved virtual environment entry by path.
+func (a *App) RemoveEnvironment(path string) error {
+	return pip.RemoveEnvironment(path)
+}
+
+// SetActiveEnvironment switches the active environment to the given venv path.
+// Pass an empty string to fall back to the system python.
+func (a *App) SetActiveEnvironment(path string) error {
+	return pip.SetActiveEnvironment(path)
+}
+
+// ScanForVenvs scans the given directory for virtual environment sub-directories.
+func (a *App) ScanForVenvs(dir string) ([]pip.VenvEntry, error) {
+	return pip.ScanForVenvs(dir)
+}
+
+// BrowseForDirectory opens a native directory picker and returns the chosen path.
+func (a *App) BrowseForDirectory() (string, error) {
+	path, err := wailsruntime.OpenDirectoryDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title: "Select virtual environment directory",
+	})
+	return path, err
+}
