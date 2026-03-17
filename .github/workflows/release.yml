@@ -130,7 +130,7 @@ jobs:
         run: |
           CURR_TAG="${GITHUB_REF#refs/tags/}"
           PREV_TAG=$(git tag --sort=-version:refname | grep -E '^v' | sed -n '2p')
-          echo "## Commits" > commit_log.md
+          echo "## Changes" > commit_log.md
           echo "" >> commit_log.md
           if [ -n "$PREV_TAG" ]; then
             echo "Changes since \`${PREV_TAG}\`:" >> commit_log.md
