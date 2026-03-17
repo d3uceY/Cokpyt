@@ -2,12 +2,18 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"regexp"
 
 	"Cokpyt/backend/pip"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+// preReleasePattern matches version tags that contain pre-release identifiers.
+var preReleasePattern = regexp.MustCompile(`(?i)(alpha|beta|rc|dev|preview|pre|snapshot|nightly)`)
 
 // App struct
 type App struct {
@@ -36,6 +42,46 @@ func (a *App) startup(ctx context.Context) {
 // GetVersion returns the application version string.
 func (a *App) GetVersion() string {
 	return Version
+}
+
+// UpdateInfo describes the result of a GitHub release check.
+type UpdateInfo struct {
+	HasUpdate     bool   `json:"hasUpdate"`
+	LatestVersion string `json:"latestVersion"`
+	ReleaseURL    string `json:"releaseURL"`
+}
+
+// CheckForUpdate queries the GitHub releases API and reports whether a newer
+// version of Cokpyt is available.
+func (a *App) CheckForUpdate() (UpdateInfo, error) {
+	const apiURL = "https://api.github.com/repos/d3ucey/Cokpyt/releases/latest"
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return UpdateInfo{}, err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "Cokpyt-app")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return UpdateInfo{}, err
+	}
+	defer resp.Body.Close()
+
+	var release struct {
+		TagName string `json:"tag_name"`
+		HTMLURL string `json:"html_url"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return UpdateInfo{}, err
+	}
+
+	hasUpdate := release.TagName != "" && release.TagName != Version && !preReleasePattern.MatchString(release.TagName)
+	return UpdateInfo{
+		HasUpdate:     hasUpdate,
+		LatestVersion: release.TagName,
+		ReleaseURL:    release.HTMLURL,
+	}, nil
 }
 
 // Greet returns a greeting for the given name

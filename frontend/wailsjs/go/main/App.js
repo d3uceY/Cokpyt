@@ -14,6 +14,10 @@ export function BrowseForDirectory() {
   return window['go']['main']['App']['BrowseForDirectory']();
 }
 
+export function CheckForUpdate() {
+  return window['go']['main']['App']['CheckForUpdate']();
+}
+
 export function ClearHistory() {
   return window['go']['main']['App']['ClearHistory']();
 }

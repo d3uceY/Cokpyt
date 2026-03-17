@@ -22,9 +22,10 @@ interface SidebarProps {
   onToggleTheme: () => void
   updateCount: number
   version: string
+  hasAppUpdate: boolean
 }
 
-export function Sidebar({ isDark, onToggleTheme, updateCount, version }: SidebarProps) {
+export function Sidebar({ isDark, onToggleTheme, updateCount, version, hasAppUpdate }: SidebarProps) {
   return (
     <aside id="tour-sidebar" className="w-64 border-r border-black/10 dark:border-white/10 bg-[#f5f7f8] dark:bg-[#0f1723] flex flex-col fixed h-full z-10">
       {/* Brand */}
@@ -85,6 +86,9 @@ export function Sidebar({ isDark, onToggleTheme, updateCount, version }: Sidebar
           >
             <span className="material-symbols-outlined text-xl leading-none">{item.icon}</span>
             <span>{item.label}</span>
+            {item.to === '/settings' && hasAppUpdate && (
+              <span className="ml-auto w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Update available" />
+            )}
           </NavLink>
         ))}
       </nav>

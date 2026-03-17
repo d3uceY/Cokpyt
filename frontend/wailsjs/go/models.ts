@@ -1,3 +1,24 @@
+export namespace main {
+	
+	export class UpdateInfo {
+	    hasUpdate: boolean;
+	    latestVersion: string;
+	    releaseURL: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hasUpdate = source["hasUpdate"];
+	        this.latestVersion = source["latestVersion"];
+	        this.releaseURL = source["releaseURL"];
+	    }
+	}
+
+}
+
 export namespace pip {
 	
 	export class VenvEntry {

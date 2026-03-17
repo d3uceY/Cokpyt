@@ -127,19 +127,69 @@ jobs:
           fetch-depth: 0
 
       - name: Generate commit log
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CURR_TAG="${GITHUB_REF#refs/tags/}"
           PREV_TAG=$(git tag --sort=-version:refname | grep -E '^v' | sed -n '2p')
-          echo "## Changes" > commit_log.md
+          REPO="${{ github.repository }}"
+
+          echo "## What's Changed" > commit_log.md
           echo "" >> commit_log.md
+
           if [ -n "$PREV_TAG" ]; then
             echo "Changes since \`${PREV_TAG}\`:" >> commit_log.md
             echo "" >> commit_log.md
-            git log "${PREV_TAG}..${CURR_TAG}" --pretty=format:"- %s (%h)" --no-merges >> commit_log.md
+
+            # Fetch compare data once and reuse it
+            COMPARE_JSON=$(gh api "repos/${REPO}/compare/${PREV_TAG}...${CURR_TAG}")
+
+            # Write commits with @username
+            echo "$COMPARE_JSON" | jq -r '
+              .commits[] |
+              select(.commit.message | startswith("Merge ") | not) |
+              "- " + (.commit.message | split("\n")[0]) + " (" + .sha[0:7] + ") @" + (.author.login // .commit.author.name)
+            ' >> commit_log.md
+
+            echo "" >> commit_log.md
+
+            # Detect new contributors
+            mapfile -t CURR_LOGINS < <(echo "$COMPARE_JSON" | jq -r '
+              [.commits[].author | select(. != null) | .login] | unique[]
+            ')
+
+            mapfile -t PREV_LOGINS < <(gh api "repos/${REPO}/commits?sha=${PREV_TAG}" \
+              --paginate \
+              --jq '[.[].author | select(. != null) | .login] | unique[]' \
+              | sort -u)
+
+            NEW_CONTRIBS=()
+            for login in "${CURR_LOGINS[@]}"; do
+              found=false
+              for prev in "${PREV_LOGINS[@]}"; do
+                if [ "$login" = "$prev" ]; then
+                  found=true
+                  break
+                fi
+              done
+              if [ "$found" = false ]; then
+                NEW_CONTRIBS+=("$login")
+              fi
+            done
+
+            if [ ${#NEW_CONTRIBS[@]} -gt 0 ]; then
+              echo "## New Contributors" >> commit_log.md
+              echo "" >> commit_log.md
+              for login in "${NEW_CONTRIBS[@]}"; do
+                echo "- @${login} made their first contribution!" >> commit_log.md
+              done
+              echo "" >> commit_log.md
+            fi
           else
-            git log "${CURR_TAG}" --pretty=format:"- %s (%h)" --no-merges >> commit_log.md
+            # First release — GitHub compare API not available, fall back to git log with author name
+            git log "${CURR_TAG}" --pretty=format:"- %s (%h) @%an" --no-merges >> commit_log.md
+            echo "" >> commit_log.md
           fi
-          echo "" >> commit_log.md
 
       - uses: actions/download-artifact@v4
         with:
