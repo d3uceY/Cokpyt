@@ -16,10 +16,12 @@ Each row in the table represents one installed package and shows:
 
 | Column | Description |
 |---|---|
-| **Name** | Package name as it appears in PyPI |
+| **Package** | Package name (monospace) with the package summary shown as a smaller line beneath it |
 | **Version** | Currently installed version |
-| **Description** | Short summary pulled from the package metadata |
-| **Actions** | Per-row **Upgrade** and **Uninstall** buttons |
+| **Latest** | Newest version available on PyPI — highlighted green when an update is available |
+| **Source** | Always **PyPI** for pip-managed packages |
+| **Status** | **Up to date** (green) or **Outdated** (amber) based on whether a newer version exists |
+| **Actions** | Per-row **Upgrade** and **Uninstall** buttons; Upgrade is only active when the package is outdated |
 
 The table is paginated for large environments and stays responsive even with hundreds of packages.
 

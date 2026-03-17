@@ -44,10 +44,10 @@ All environments you have registered appear in the **Saved Environments** list. 
 
 - The display **name** you gave the environment (or the directory name if you left it blank)
 - The full **file-system path** to the venv root
-- An **Activate** button to make it the active environment
+- An **Switch** button to make it the active environment
 - A **Remove** button to delete it from the saved list (the venv directory on disk is not touched)
 
-The currently active environment's row is highlighted and its **Activate** button is replaced with an *Active* badge.
+The currently active environment's row is highlighted and its **Switch** button is replaced with an *Active* badge.
 
 ---
 
@@ -71,7 +71,7 @@ Each result can be added to your saved list with one click. Entries that are alr
 
 ## Switching Environments
 
-Click **Activate** on any saved environment row. Cokpyt will:
+Click **Switch** on any saved environment row. Cokpyt will:
 
 1. Persist the choice to `config.json` so it survives app restarts.
 2. Refresh the **Runtime Info** cards with the new environment's details.

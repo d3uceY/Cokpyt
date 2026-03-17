@@ -6,11 +6,7 @@ sidebar_position: 1
 
 The **Dashboard** (labelled *Overview* inside the app) is the first page you see when Cokpyt opens. It gives you a real-time snapshot of your entire Python environment at a glance.
 
-:::note Screenshot coming soon
-A full-resolution screenshot of the Dashboard will be added here. In the meantime, see the hero image on the [Introduction](../intro) page for a preview of the overall UI.
-:::
-
-![Dashboard overview placeholder](/img/dashboard.png)
+![Dashboard overview](/img/dashboard.png)
 
 ---
 
@@ -21,8 +17,8 @@ Three cards run across the top of the page:
 | Card | What it shows |
 |---|---|
 | **Installed Packages** | Total number of packages currently in the active environment |
-| **Outdated** | How many of those packages have a newer version available on PyPI |
-| **Python / pip** | Active Python version and pip version, read from the environment at startup |
+| **Outdated Packages** | How many of those packages have a newer version available on PyPI |
+| **Python Runtime** | Active Python version and pip version, read from the environment at startup |
 
 All three cards refresh each time you click the **Refresh** button in the page header.
 
@@ -30,21 +26,9 @@ All three cards refresh each time you click the **Refresh** button in the page h
 
 ## Recent Activity
 
-Below the stat cards is a table of your **5 most recent pip actions** pulled straight from the [History](./history) log. Each row shows the package name, action type (Install / Upgrade / Uninstall), status badge (success / failed), and timestamp.
+Below the stat cards is a table of your **5 most recent pip actions** pulled straight from the [History](./history) log. Each row shows the package name, version, action type (Install / Upgrade / Uninstall), status badge (success / failed), and timestamp.
 
-Click any row to jump to the full entry on the History page.
-
----
-
-## Pending Updates Breakdown
-
-On the right side of the page is a breakdown of outdated packages grouped by **bump type**:
-
-- **Major** - packages where the next version increments the first digit (e.g. `1.x.x → 2.0.0`)
-- **Minor** - second-digit bumps (e.g. `1.3.x → 1.4.0`)
-- **Patch** - third-digit bumps (e.g. `1.3.2 → 1.3.3`)
-
-This makes it easy to decide which upgrades are safe to apply right now versus which ones deserve a closer look.
+Click **View All History** in the table header to navigate directly to the full [History](./history) page.
 
 ---
 
@@ -61,13 +45,14 @@ Click **Refresh** (top-right of the page header) to re-query your live environme
 
 ### Update All
 
-Click **Update All** to run `pip install --upgrade` on every package in the outdated list in one shot. A live terminal panel slides in at the bottom of the screen so you can watch the output. When the upgrades complete, the stat cards and pending-updates breakdown refresh automatically.
+Click **Update All** to run `pip install --upgrade` on every outdated package in one shot. The button shows the number of outdated packages (e.g. **Update All (4)**) and only appears when there is at least one update available. A live terminal panel slides in at the bottom of the screen so you can watch the output. When the upgrades complete, the stat cards refresh automatically.
 
 ---
 
-## Navigation Shortcuts
+## Footer Status Bar
 
-Each stat card is clickable:
+A thin status bar at the bottom of the page shows:
 
-- **Installed Packages** card → jumps to the [Installed Packages](./installed-packages) page
-- **Outdated** card → jumps to the [Updates](./updates) page
+- Active **pip** and **Python** versions
+- **Last Sync** timestamp - when the page data was last fetched
+- A **PyPI Connected** indicator (green dot) confirming outbound PyPI access

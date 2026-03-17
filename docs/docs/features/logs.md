@@ -26,9 +26,34 @@ Each log entry shows:
 
 | Level | Meaning |
 |---|---|
-| `INFO` | Normal operations - package resolved, command started, operation completed |
-| `WARN` | Something noteworthy that didn't stop the operation - deprecated API usage, missing optional dependency |
-| `ERROR` | An operation failed - pip returned a non-zero exit code, a network request timed out, etc. |
+| `INFO` | Normal operations — package resolved, command started, operation completed |
+| `WARN` | Something noteworthy that didn't stop the operation — deprecated API usage, missing optional dependency |
+| `CRIT` | A critical condition; the application or backend encountered a serious problem |
+| `ERR` | An operation failed — pip returned a non-zero exit code, a network request timed out, etc. |
+
+---
+
+## Filtering Logs
+
+Type in the **Filter logs** box at the top of the page to narrow the visible entries in real time. The filter matches against both the log message text and the severity level, so you can type `ERR` to show only errors, or a package name to find all messages related to it.
+
+---
+
+## Auto-scroll
+
+The **Auto-scroll** checkbox in the page header (enabled by default) keeps the view pinned to the newest entry as logs stream in. Uncheck it when you want to scroll back and read earlier entries without being pulled back to the bottom.
+
+---
+
+## Clearing the Log View
+
+Click the **Clear** button in the page header to wipe the current log view. This only clears the display — it does not delete the underlying history. Logs reappear if you navigate away and come back during the same session.
+
+---
+
+## Entry Count
+
+The footer of the Logs page shows the total number of visible entries after any active filter is applied.
 
 ---
 

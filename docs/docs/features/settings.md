@@ -6,11 +6,7 @@ sidebar_position: 9
 
 The **Settings** page lets you configure Cokpyt's appearance and replay the guided tour whenever you want.
 
-:::note Screenshot coming soon
-A screenshot of the Settings page will be added here.
-:::
-
-![Settings page placeholder](/img/settings.png)
+![Settings page](/img/settings.png)
 
 ---
 

@@ -32,12 +32,13 @@ Built with Go and React on top of the [Wails](https://wails.io) framework, it pu
 |---|---|
 | [Dashboard](./features/dashboard) | Real-time overview of your environment: total packages, pending updates, Python & pip versions, recent activity |
 | [Installed Packages](./features/installed-packages) | Browse, filter, install, uninstall, and bulk-manage every package in your environment |
-| [Updates](./features/updates) | See every outdated package with version diffs; upgrade one or all at once |
+| [Updates](./features/updates) | See every outdated package with version diffs; upgrade one, a selection, or all at once |
 | [Search](./features/search) | Query PyPI instantly and install any result with one click |
 | [Doctor](./features/doctor) | Health check for Python, pip, and PyPI connectivity with actionable fix hints |
 | [History](./features/history) | Permanent audit trail of every install, upgrade, and uninstall with timestamps |
 | [Cleanup](./features/cleanup) | Reclaim disk space by clearing pip caches, `.egg-info` dirs, and `__pycache__` folders |
-| [Logs](./features/logs) | Raw pip output streamed live; browsable by severity after the fact |
+| [Logs](./features/logs) | Raw pip output streamed live; filterable by keyword and severity after the fact |
+| [Environments](./features/environment) | Register, switch between, and manage Python virtual environments |
 | [Settings](./features/settings) | Toggle light/dark theme and replay the guided tour |
 
 ## Tech Stack

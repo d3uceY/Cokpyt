@@ -38,13 +38,27 @@ Click the **Upgrade** button on any row to run `pip install --upgrade <package>`
 
 ---
 
+## Selective Upgrade
+
+Check the **checkbox** on one or more rows to select specific packages. Once at least one package is selected the header button changes to **Upgrade Selected (N)** — clicking it upgrades only the checked packages and leaves the rest untouched.
+
+To deselect all packages, uncheck the header checkbox.
+
+---
+
 ## Update All
 
-Click **Update All** in the page header to upgrade every package in the list at once. Cokpyt runs upgrades in parallel and streams combined output into the live terminal panel. When all upgrades complete, the table refreshes automatically.
+Click **Upgrade All (N)** in the page header (visible when nothing is selected) to upgrade every package in the list at once. Upgrades run in parallel and the row disappears as each package finishes. The table refreshes automatically when all upgrades complete.
 
-:::caution Before running Update All
-Major-version upgrades can introduce breaking API changes. Consider reviewing the **Major** rows before hitting **Update All** on a production environment.
+:::caution Before running Upgrade All
+Major-version upgrades can introduce breaking API changes. Consider reviewing the **Major** rows before hitting **Upgrade All** on a production environment.
 :::
+
+---
+
+## Changelog
+
+For packages that publish a changelog URL, a **Changelog** button appears to the left of the Upgrade button on that row. Clicking it opens the package's changelog in your default browser so you can review breaking changes before upgrading.
 
 ---
 
