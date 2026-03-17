@@ -1,4 +1,5 @@
 import type {ReactNode} from 'react';
+import {useState, useEffect} from 'react';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
@@ -11,6 +12,19 @@ function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   const logoUrl = useBaseUrl('/img/logo.png');
   const heroUrl = useBaseUrl('/img/hero.png');
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('https://api.github.com/repos/d3ucey/Cokpyt/releases/latest', {
+      headers: {Accept: 'application/vnd.github+json'},
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.tag_name) setLatestVersion(data.tag_name);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <header className={styles.heroBanner}>
       <div className={styles.heroInner}>
@@ -27,6 +41,19 @@ function HomepageHeader() {
             <Link className={styles.ctaButtonOutline} to="/docs/features/dashboard">
               See Features
             </Link>
+          </div>
+          <div className={styles.heroMeta}>
+            {latestVersion && (
+              <span className={styles.versionBadge}>{latestVersion}</span>
+            )}
+            <a
+              href="https://github.com/d3ucey"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.followLink}
+            >
+              follow @d3uceY
+            </a>
           </div>
         </div>
         <div className={styles.heroImageWrap}>
