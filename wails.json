@@ -1,11 +1,8 @@
 {
-  "$schema": "https://wails.io/schemas/config.v2.json",
+  "$schema": "https://wails.io/schemas/config.v3.json",
   "name": "Cokpyt",
   "outputfilename": "Cokpyt",
-  "frontend:install": "npm install",
-  "frontend:build": "npm run build",
-  "frontend:dev:watcher": "npm run dev",
-  "frontend:dev:serverUrl": "auto",
+  "version": "3",
   "author": {
     "name": "d3uceY",
     "email": "onyekwelujesse1234@gmail.com"
@@ -13,7 +10,7 @@
   "info": {
     "companyName": "d3uceY",
     "productName": "Cokpyt",
-    "productVersion": "0.2.1",
+    "productVersion": "0.3.0",
     "copyright": "Copyright © 2026 d3uceY",
     "comments": "Built using Wails (https://wails.io)"
   }
