@@ -3,46 +3,337 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
 
+	"Cokpyt/backend/environments"
 	"Cokpyt/backend/pip"
 
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// preReleasePattern matches version tags that contain pre-release identifiers.
-var preReleasePattern = regexp.MustCompile(`(?i)(alpha|beta|rc|dev|preview|pre|snapshot|nightly)`)
-
-// App struct
+// App is the service the frontend talks to. Every exported method is callable
+// from the webview, so they are the whole API surface.
+//
+// It caches the last inventory because discovery is the expensive part of the
+// app and every page needs the answer. Nothing else is cached: a package list
+// goes stale the moment another tool touches the environment.
 type App struct {
-	ctx context.Context
+	app *application.App
+
+	mu       sync.RWMutex
+	envs     []environments.Env
+	notes    []string
+	scanned  bool          // at least one scan has finished
+	inflight chan struct{} // closed when the running scan finishes, nil when idle
 }
 
-// NewApp creates a new App application struct
-func NewApp() *App {
-	return &App{}
+// NewApp wires the service to the application so it can emit events.
+func NewApp(app *application.App) *App {
+	return &App{app: app}
 }
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
+// emit forwards an event to the webview. The nil check is what lets the scan
+// path be tested without a running application.
+func (a *App) emit(name string, data ...any) {
+	if a.app != nil {
+		a.app.Event.Emit(name, data...)
+	}
+}
+
+// Bootstrap is everything the shell needs to draw itself, in one round trip.
+type Bootstrap struct {
+	Version  string             `json:"version"`
+	Theme    string             `json:"theme"`
+	Active   string             `json:"active"`
+	Platform string             `json:"platform"`
+	Envs     []environments.Env `json:"envs"`
+	Notes    []string           `json:"notes"`
+	Scanned  bool               `json:"scanned"`
+	Scanning bool               `json:"scanning"`
+}
+
+// ServiceStartup runs when the app starts. Discovery is kicked off in the
+// background here so the first paint is not waiting on a profile sweep.
+func (a *App) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
+	environments.Progress = func(msg string) {
+		a.emit("scan:progress", msg)
+	}
 	pip.LogEmitter = func(level, msg string) {
-		wailsruntime.EventsEmit(ctx, "pip:log", level, msg)
-		if level == "STREAM" {
-			wailsruntime.EventsEmit(ctx, "pip:stream", msg)
+		a.emit("log", level, msg)
+	}
+
+	go func() {
+		a.mu.Lock()
+		a.startScanLocked()
+		a.mu.Unlock()
+	}()
+	go pip.WarmIndex()
+	return nil
+}
+
+// Bootstrap returns the shell state. It never waits for discovery: a profile
+// sweep takes seconds, and a blank window for seconds is worse than a window
+// that says it is still looking. The shell draws what is known, then redraws
+// when the scan:done event arrives.
+func (a *App) Bootstrap() Bootstrap {
+	a.mu.Lock()
+	if !a.scanned && a.inflight == nil {
+		a.startScanLocked()
+	}
+	envs, notes, scanned, scanning := a.envs, a.notes, a.scanned, a.inflight != nil
+	a.mu.Unlock()
+
+	cfg := pip.GetConfig()
+	active := a.pick(cfg.Active, envs)
+	if active != "" && active != cfg.Active {
+		_ = pip.UpdateConfig(func(c *pip.Config) { c.Active = active })
+	}
+
+	return Bootstrap{
+		Version:  Version,
+		Theme:    cfg.Theme,
+		Active:   active,
+		Platform: runtime.GOOS,
+		Envs:     envs,
+		Notes:    notes,
+		Scanned:  scanned,
+		Scanning: scanning,
+	}
+}
+
+// Scan re-inventories the machine and waits for the result. The user-facing
+// "Rescan" action calls this, because someone who clicked Rescan wants to be
+// told when it is finished.
+func (a *App) Scan() Bootstrap {
+	a.scan()
+	return a.Bootstrap()
+}
+
+// ScanFolder inventories one directory the user chose, for the projects that
+// live on a drive the profile sweep never visits.
+func (a *App) ScanFolder(dir string) ([]environments.Env, error) {
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory", dir)
+	}
+	found := environments.ScanFolder(dir)
+
+	// Fold them in next to what was already known, so they are selectable
+	// without waiting for a full rescan.
+	a.mu.Lock()
+	known := make(map[string]bool, len(a.envs))
+	for _, env := range a.envs {
+		known[strings.ToLower(env.Python)] = true
+	}
+	for _, env := range found {
+		if !known[strings.ToLower(env.Python)] {
+			a.envs = append(a.envs, env)
 		}
 	}
-	// Pre-warm the PyPI Simple index in the background so the first search is fast.
-	go pip.WarmSimpleIndex()
+	a.mu.Unlock()
+	return found, nil
 }
 
-// GetVersion returns the application version string.
-func (a *App) GetVersion() string {
-	return Version
+// ChooseFolder opens the native directory picker.
+func (a *App) ChooseFolder() (string, error) {
+	return a.app.Dialog.OpenFile().
+		SetTitle("Choose a folder to look for environments in").
+		CanChooseFiles(false).
+		CanChooseDirectories(true).
+		PromptForSingleSelection()
 }
+
+// SelectEnvironment makes an environment the one every page acts on.
+func (a *App) SelectEnvironment(python string) error {
+	a.mu.RLock()
+	_, ok := a.find(python)
+	a.mu.RUnlock()
+	if !ok {
+		return fmt.Errorf("no environment with the interpreter %s", python)
+	}
+	return pip.UpdateConfig(func(c *pip.Config) { c.Active = python })
+}
+
+// SetTheme stores the theme preference.
+func (a *App) SetTheme(theme string) error {
+	if theme != "dark" && theme != "light" {
+		return fmt.Errorf("unknown theme %q", theme)
+	}
+	return pip.UpdateConfig(func(c *pip.Config) { c.Theme = theme })
+}
+
+// MarkIntroSeen records that the first-run note has been dismissed.
+func (a *App) MarkIntroSeen() error {
+	return pip.UpdateConfig(func(c *pip.Config) { c.TourSeen = true })
+}
+
+// IntroSeen reports whether the first-run note should be shown.
+func (a *App) IntroSeen() bool { return pip.GetConfig().TourSeen }
+
+// ── environment detail ───────────────────────────────────────────────────────
+
+// PackageCounts is how many distributions each environment holds, keyed by
+// interpreter path. Counted from the filesystem rather than by running pip once
+// per environment.
+func (a *App) PackageCounts() map[string]int {
+	a.mu.RLock()
+	envs := a.envs
+	a.mu.RUnlock()
+
+	counts := make(map[string]int, len(envs))
+	for _, env := range envs {
+		counts[env.Python] = pip.Count(env)
+	}
+	return counts
+}
+
+// EnvironmentInfo describes one interpreter.
+func (a *App) EnvironmentInfo(python string) (pip.EnvInfo, error) {
+	env, ok := a.resolve(python)
+	if !ok {
+		return pip.EnvInfo{}, unknown(python)
+	}
+	return pip.Info(env)
+}
+
+// ── packages ─────────────────────────────────────────────────────────────────
+
+// Packages lists what is installed in an environment.
+func (a *App) Packages(python string) ([]pip.Package, error) {
+	env, ok := a.resolve(python)
+	if !ok {
+		return nil, unknown(python)
+	}
+	return pip.List(env)
+}
+
+// Outdated lists packages with a newer version on PyPI. It is the only call
+// here that needs the network, which is why it is separate from Packages.
+func (a *App) Outdated(python string) ([]pip.Outdated, error) {
+	env, ok := a.resolve(python)
+	if !ok {
+		return nil, unknown(python)
+	}
+	return pip.ListOutdated(env)
+}
+
+// Install installs a requirement into an environment.
+func (a *App) Install(python, spec string) error {
+	env, ok := a.resolve(python)
+	if !ok {
+		return unknown(python)
+	}
+	return pip.Install(env, strings.TrimSpace(spec))
+}
+
+// Upgrade upgrades one package.
+func (a *App) Upgrade(python, name string) error {
+	env, ok := a.resolve(python)
+	if !ok {
+		return unknown(python)
+	}
+	return pip.Upgrade(env, name)
+}
+
+// Uninstall removes one package.
+func (a *App) Uninstall(python, name string) error {
+	env, ok := a.resolve(python)
+	if !ok {
+		return unknown(python)
+	}
+	return pip.Uninstall(env, name)
+}
+
+// UpgradeMany upgrades several packages and returns the ones that failed, with
+// a reason. One failure should not abandon the rest of the batch.
+func (a *App) UpgradeMany(python string, names []string) ([]string, error) {
+	env, ok := a.resolve(python)
+	if !ok {
+		return nil, unknown(python)
+	}
+	return each(names, func(name string) error { return pip.Upgrade(env, name) }), nil
+}
+
+// UninstallMany removes several packages and returns the ones that failed.
+func (a *App) UninstallMany(python string, names []string) ([]string, error) {
+	env, ok := a.resolve(python)
+	if !ok {
+		return nil, unknown(python)
+	}
+	return each(names, func(name string) error { return pip.Uninstall(env, name) }), nil
+}
+
+// each runs work for every name and collects "name: reason" for the failures.
+func each(names []string, work func(string) error) []string {
+	failures := []string{}
+	for _, name := range names {
+		if err := work(name); err != nil {
+			failures = append(failures, fmt.Sprintf("%s — %s", name, strings.TrimPrefix(err.Error(), "pip ")))
+		}
+	}
+	return failures
+}
+
+// ── maintenance ──────────────────────────────────────────────────────────────
+
+// Doctor checks an environment and the network it depends on.
+func (a *App) Doctor(python string) (pip.Report, error) {
+	env, ok := a.resolve(python)
+	if !ok {
+		return pip.Report{}, unknown(python)
+	}
+	return pip.Doctor(env), nil
+}
+
+// CleanupScan measures what could be reclaimed. Sizes come back in bytes and
+// are formatted by the frontend.
+func (a *App) CleanupScan(python string) ([]pip.Reclaim, error) {
+	env, ok := a.resolve(python)
+	if !ok {
+		return nil, unknown(python)
+	}
+	return pip.CleanupInfo(env), nil
+}
+
+// CleanupRun removes the requested categories.
+func (a *App) CleanupRun(python string, kinds []string) error {
+	env, ok := a.resolve(python)
+	if !ok {
+		return unknown(python)
+	}
+	return pip.Cleanup(env, kinds)
+}
+
+// Search looks for packages on PyPI.
+func (a *App) Search(query string) ([]pip.SearchResult, error) { return pip.Search(query) }
+
+// IndexStatus reports the stored PyPI name index.
+func (a *App) IndexStatus() pip.IndexStatus { return pip.CachedIndex() }
+
+// RefreshIndex downloads the PyPI name index again and stores it.
+func (a *App) RefreshIndex() (pip.IndexStatus, error) { return pip.RefreshIndex() }
+
+// History returns the recorded pip operations, newest first.
+func (a *App) History() ([]pip.HistoryEntry, error) { return pip.GetHistory() }
+
+// ClearHistory wipes the operation log.
+func (a *App) ClearHistory() error { return pip.ClearHistory() }
+
+// Logs returns the persisted log lines, oldest first.
+func (a *App) Logs() ([]pip.LogEntry, error) { return pip.GetLogs() }
+
+// ClearLogs wipes the persisted log.
+func (a *App) ClearLogs() error { return pip.ClearLogs() }
+
+// ── shell odds and ends ──────────────────────────────────────────────────────
 
 // UpdateInfo describes the result of a GitHub release check.
 type UpdateInfo struct {
@@ -51,16 +342,19 @@ type UpdateInfo struct {
 	ReleaseURL    string `json:"releaseURL"`
 }
 
-// CheckForUpdate queries the GitHub releases API and reports whether a newer
-// version of Cokpyt is available.
+var (
+	preReleasePattern = regexp.MustCompile(`(?i)(alpha|beta|rc|dev|preview|pre|snapshot|nightly)`)
+	digitsPattern     = regexp.MustCompile(`\d+`)
+)
+
+// CheckForUpdate asks GitHub whether a newer release exists.
 func (a *App) CheckForUpdate() (UpdateInfo, error) {
-	const apiURL = "https://api.github.com/repos/d3ucey/Cokpyt/releases/latest"
-	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/d3uceY/Cokpyt/releases/latest", nil)
 	if err != nil {
 		return UpdateInfo{}, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "Cokpyt-app")
+	req.Header.Set("User-Agent", "Cokpyt")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -75,151 +369,167 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return UpdateInfo{}, err
 	}
-
-	hasUpdate := release.TagName != "" && release.TagName != Version && !preReleasePattern.MatchString(release.TagName)
+	if release.TagName == "" || preReleasePattern.MatchString(release.TagName) {
+		return UpdateInfo{LatestVersion: release.TagName, ReleaseURL: release.HTMLURL}, nil
+	}
 	return UpdateInfo{
-		HasUpdate:     hasUpdate,
+		HasUpdate:     Newer(release.TagName, Version),
 		LatestVersion: release.TagName,
 		ReleaseURL:    release.HTMLURL,
 	}, nil
 }
 
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
-}
-
-// SearchPackages queries PyPI for packages matching the given query.
-func (a *App) SearchPackages(query string) ([]pip.SearchResult, error) {
-	return pip.SearchPackages(query)
-}
-
-// GetPythonInfo returns the active Python and pip versions.
-func (a *App) GetPythonInfo() (pip.PythonInfo, error) {
-	return pip.GetPythonInfo()
-}
-
-// GetOutdatedPackages returns packages that have a newer version available.
-func (a *App) GetOutdatedPackages() ([]pip.OutdatedPackage, error) {
-	return pip.GetOutdatedPackages()
-}
-
-// GetInstalledPackages returns all installed pip packages with version and update status.
-func (a *App) GetInstalledPackages() ([]pip.PipPackage, error) {
-	return pip.GetInstalledPackages()
-}
-
-// InstallPackage installs a pip package by name.
-func (a *App) InstallPackage(name string) error {
-	return pip.InstallPackage(name)
-}
-
-// UninstallPackage removes a pip package by name.
-func (a *App) UninstallPackage(name string) error {
-	return pip.UninstallPackage(name)
-}
-
-// UpgradePackage upgrades a pip package to its latest version.
-func (a *App) UpgradePackage(name string) error {
-	return pip.UpgradePackage(name)
-}
-
-// GetCleanupInfo returns the reclaimable disk space for each cleanup category.
-func (a *App) GetCleanupInfo() (pip.CleanupInfo, error) {
-	return pip.GetCleanupInfo()
-}
-
-// RunCleanup performs the requested cleanup operations.
-// types may contain "cache", "orphan", and/or "temp".
-func (a *App) RunCleanup(types []string) error {
-	return pip.RunCleanup(types)
-}
-
-// GetHistory returns all recorded pip operation history, newest first.
-func (a *App) GetHistory() ([]pip.HistoryEntry, error) {
-	return pip.GetHistory()
-}
-
-// ClearHistory deletes all recorded pip operation history.
-func (a *App) ClearHistory() error {
-	return pip.ClearHistory()
-}
-
-// GetPipEnvironmentInfo returns the full Python runtime environment details.
-func (a *App) GetPipEnvironmentInfo() (pip.PipEnvironmentInfo, error) {
-	return pip.GetPipEnvironmentInfo()
-}
-
-// RunDoctor runs all diagnostic checks and returns a report.
-func (a *App) RunDoctor() pip.DoctorReport {
-	return pip.RunDoctor()
-}
-
-// GetConfig returns the user configuration.
-func (a *App) GetConfig() (pip.AppConfig, error) {
-	return pip.GetConfig()
-}
-
-// SetTheme saves the theme preference ("light" or "dark").
-func (a *App) SetTheme(theme string) error {
-	cfg, _ := pip.GetConfig()
-	cfg.Theme = theme
-	return pip.SaveConfig(cfg)
-}
-
-// MarkTourSeen marks the intro tour as completed so it does not auto-start again.
-func (a *App) MarkTourSeen() error {
-	cfg, _ := pip.GetConfig()
-	cfg.TourSeen = true
-	return pip.SaveConfig(cfg)
-}
-
-// GetLogs returns all persisted log entries.
-func (a *App) GetLogs() ([]pip.LogEntry, error) {
-	return pip.GetLogs()
-}
-
-// BatchUninstall removes multiple pip packages and returns a map of name→error.
-func (a *App) BatchUninstall(names []string) map[string]string {
-	errs := make(map[string]string)
-	for _, name := range names {
-		if err := pip.UninstallPackage(name); err != nil {
-			errs[name] = err.Error()
+// Newer reports whether candidate is a later vMAJOR.MINOR.PATCH than current.
+// Plain string comparison gets this wrong: "v0.10.0" sorts before "v0.9.0".
+func Newer(candidate, current string) bool {
+	want, have := VersionNumbers(candidate), VersionNumbers(current)
+	for i := 0; i < len(want) && i < len(have); i++ {
+		if want[i] != have[i] {
+			return want[i] > have[i]
 		}
 	}
-	return errs
+	return len(want) > len(have)
 }
 
-// ListEnvironments returns all saved virtual environments from config.
-func (a *App) ListEnvironments() ([]pip.VenvEntry, error) {
-	return pip.ListEnvironments()
+// VersionNumbers pulls the numeric components out of a version string.
+func VersionNumbers(v string) []int {
+	parts := digitsPattern.FindAllString(v, -1)
+	numbers := make([]int, 0, len(parts))
+	for _, part := range parts {
+		n, _ := strconv.Atoi(part)
+		numbers = append(numbers, n)
+	}
+	return numbers
 }
 
-// AddEnvironment validates and saves a new virtual environment entry.
-func (a *App) AddEnvironment(name, path string) error {
-	return pip.AddEnvironment(name, path)
+// OpenURL opens a link in the user's browser.
+func (a *App) OpenURL(url string) error {
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		return errors.New("only http and https links can be opened")
+	}
+	return a.app.Browser.OpenURL(url)
 }
 
-// RemoveEnvironment removes a saved virtual environment entry by path.
-func (a *App) RemoveEnvironment(path string) error {
-	return pip.RemoveEnvironment(path)
+// RevealPath shows a directory in the platform's file manager.
+func (a *App) RevealPath(path string) error {
+	if path == "" {
+		return errors.New("nothing to reveal")
+	}
+	cleaned := filepath.Clean(path)
+	if fi, err := os.Stat(cleaned); err != nil || !fi.IsDir() {
+		return fmt.Errorf("%s is not a directory", cleaned)
+	}
+	return a.app.Env.OpenFileManager(cleaned, false)
 }
 
-// SetActiveEnvironment switches the active environment to the given venv path.
-// Pass an empty string to fall back to the system python.
-func (a *App) SetActiveEnvironment(path string) error {
-	return pip.SetActiveEnvironment(path)
+// ── internals ────────────────────────────────────────────────────────────────
+
+// scan runs discovery, at most one at a time. Two concurrent scans would walk
+// the whole profile twice for the same answer, and the answer that arrived
+// first is the one that would be thrown away.
+func (a *App) scan() ([]environments.Env, []string) {
+	a.mu.Lock()
+	if running := a.inflight; running != nil {
+		a.mu.Unlock()
+		<-running
+		a.mu.RLock()
+		defer a.mu.RUnlock()
+		return a.envs, a.notes
+	}
+	done := a.startScanLocked()
+	a.mu.Unlock()
+
+	<-done
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.envs, a.notes
 }
 
-// ScanForVenvs scans the given directory for virtual environment sub-directories.
-func (a *App) ScanForVenvs(dir string) ([]pip.VenvEntry, error) {
-	return pip.ScanForVenvs(dir)
+// startScanLocked launches a scan and returns the channel that closes when it
+// finishes. The caller must hold a.mu.
+func (a *App) startScanLocked() chan struct{} {
+	done := make(chan struct{})
+	a.inflight = done
+
+	go func() {
+		result := environments.Discover()
+
+		a.mu.Lock()
+		a.envs, a.notes, a.scanned = result.Envs, result.Notes, true
+		a.inflight = nil
+
+		// A stale selection — the venv was deleted since last run — falls back
+		// to the best default rather than leaving every page pointed at
+		// nothing. It is handled under the same lock that installs the result,
+		// so a concurrent find() cannot see the two halves disagree.
+		if active := pip.GetConfig().Active; active != "" {
+			if _, ok := a.find(active); !ok {
+				_ = pip.UpdateConfig(func(c *pip.Config) { c.Active = a.pick("", result.Envs) })
+			}
+		}
+		a.mu.Unlock()
+
+		close(done)
+		a.emit("scan:done")
+	}()
+
+	return done
 }
 
-// BrowseForDirectory opens a native directory picker and returns the chosen path.
-func (a *App) BrowseForDirectory() (string, error) {
-	path, err := wailsruntime.OpenDirectoryDialog(a.ctx, wailsruntime.OpenDialogOptions{
-		Title: "Select virtual environment directory",
-	})
-	return path, err
+// pick returns the chosen interpreter, or the one a new project would want when
+// there is no valid choice: the launcher's default runtime, then any base
+// interpreter, then anything at all.
+func (a *App) pick(preferred string, envs []environments.Env) string {
+	for _, env := range envs {
+		if env.Python == preferred {
+			return preferred
+		}
+	}
+	for _, env := range envs {
+		if env.Default {
+			return env.Python
+		}
+	}
+	for _, env := range envs {
+		if !env.IsVirtual() {
+			return env.Python
+		}
+	}
+	if len(envs) > 0 {
+		return envs[0].Python
+	}
+	return ""
+}
+
+func (a *App) find(python string) (environments.Env, bool) {
+	for _, env := range a.envs {
+		if env.Python == python {
+			return env, true
+		}
+	}
+	return environments.Env{}, false
+}
+
+// resolve looks up an environment, rescanning once if the id is unknown. The
+// rescan earns its keep because an environment can be created between the
+// startup scan and the click.
+func (a *App) resolve(python string) (environments.Env, bool) {
+	a.mu.RLock()
+	env, ok := a.find(python)
+	a.mu.RUnlock()
+	if ok {
+		return env, true
+	}
+	a.scan()
+	a.mu.RLock()
+	env, ok = a.find(python)
+	a.mu.RUnlock()
+	return env, ok
+}
+
+func unknown(python string) error {
+	if python == "" {
+		return errors.New("no Python environment is selected")
+	}
+	return fmt.Errorf("no environment is using %s any more", python)
 }
