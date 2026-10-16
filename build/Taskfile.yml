@@ -1,0 +1,41 @@
+# Shared build steps.
+#
+# There is no frontend build: the page is plain HTML, CSS and ES modules, and
+# the Wails CLI writes the bindings as ES modules too. So the only generated
+# input is frontend/bindings, and the only compiler is Go.
+
+version: '3'
+
+vars:
+  APP_NAME: "Cokpyt"
+  BIN_DIR: "bin"
+
+tasks:
+  go:mod:tidy:
+    summary: Runs `go mod tidy`
+    internal: true
+    run: once
+    cmds:
+      - go mod tidy
+
+  generate:bindings:
+    summary: Generates the frontend's ES module bindings from the Go services
+    run: once
+    cmds:
+      # -b bundles the Wails runtime at /wails/runtime.js instead of importing
+      # the npm package, which is what lets the frontend run with no bundler.
+      # The CLI prints its progress on stderr, and Windows PowerShell turns a
+      # native command's stderr into an error record, which fails the task and
+      # makes a good build exit 1. Merging the two streams keeps it on stdout.
+      - wails3 generate bindings -b -clean 2>&1
+
+  generate:icons:
+    summary: Generates the Windows .ico and macOS .icns from build/appicon.png
+    dir: build
+    sources:
+      - "appicon.png"
+    generates:
+      - "windows/icon.ico"
+      - "darwin/icons.icns"
+    cmds:
+      - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Cokpyt
+Comment=A desktop GUI for pip
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/Cokpyt %u
+Terminal=false
+Type=Application
+Icon=Cokpyt
+Categories=Utility;
+StartupWMClass=Cokpyt
+
+ 

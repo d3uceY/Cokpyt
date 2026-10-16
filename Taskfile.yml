@@ -1,0 +1,41 @@
+# `build`, `package` and `run` exist because the wails3 CLI is a thin wrapper:
+# `wails3 build` runs the task named `build`, so these are the definitions it
+# dispatches to. Do not rename them.
+
+version: '3'
+
+includes:
+  common: ./build/Taskfile.yml
+  windows: ./build/windows/Taskfile.yml
+  darwin: ./build/darwin/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
+
+vars:
+  APP_NAME: "Cokpyt"
+
+tasks:
+  build:
+    summary: Builds the app for this OS
+    cmds:
+      - task: "{{OS}}:build"
+
+  package:
+    summary: Packages the app for this OS
+    cmds:
+      - task: "{{OS}}:package"
+
+  run:
+    summary: Runs the built app
+    cmds:
+      - task: "{{OS}}:run"
+
+  test:
+    summary: Runs the Go tests and syntax-checks the frontend
+    cmds:
+      - go test ./...
+      - node scripts/check-frontend.mjs
+
+  bindings:
+    summary: Regenerates the frontend's ES module bindings
+    cmds:
+      - task: common:generate:bindings

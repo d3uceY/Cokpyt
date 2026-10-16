@@ -1,0 +1,66 @@
+# Windows build.
+#
+# The .syso carries the icon, the manifest and the version block into the
+# executable, which is what makes the .exe look like an application rather than
+# a console program. It is generated next to main.go, picked up automatically by
+# `go build`, and removed again so it never becomes a stale committed artefact.
+
+version: '3'
+
+includes:
+  common: ../Taskfile.yml
+
+vars:
+  APP_NAME: "Cokpyt"
+  BIN_DIR: "bin"
+
+tasks:
+  build:
+    summary: Builds Cokpyt for Windows
+    deps:
+      - task: common:go:mod:tidy
+      - task: common:generate:bindings
+      - task: common:generate:icons
+    cmds:
+      - task: generate:syso
+      - go build {{.BUILD_FLAGS}} -o "{{.BIN_DIR}}/{{.APP_NAME}}.exe"
+      - cmd: powershell -NoProfile -Command "Remove-Item *.syso -Force -ErrorAction SilentlyContinue"
+        platforms: [windows]
+      - cmd: rm -f *.syso
+        platforms: [linux, darwin]
+    vars:
+      BUILD_FLAGS: '{{if eq .DEV "true"}}-tags dev -buildvcs=false -gcflags=all="-l"{{else}}-tags production -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui"{{end}}'
+    env:
+      GOOS: windows
+      CGO_ENABLED: '0'
+
+  generate:syso:
+    summary: Generates the Windows .syso from the icon, manifest and version info
+    dir: build
+    cmds:
+      - wails3 generate syso -arch {{.ARCH}} -icon windows/icon.ico -manifest windows/wails.exe.manifest -info windows/info.json -out ../wails_windows_{{.ARCH}}.syso
+    vars:
+      ARCH: '{{.ARCH | default ARCH}}'
+
+  run:
+    summary: Runs the built app
+    cmds:
+      - "{{.BIN_DIR}}/{{.APP_NAME}}.exe"
+
+  package:
+    summary: Builds a Windows installer with the NSIS script in build/windows/nsis
+    deps:
+      - task: build
+    dir: build/windows/nsis
+    preconditions:
+      - sh: command -v makensis
+        msg: "NSIS is required to build the installer: https://nsis.sourceforge.io/Download"
+    cmds:
+      # The installer bundles the WebView2 bootstrapper, so a machine without
+      # the runtime can still install the app. Fetching it is a build step
+      # rather than a committed 1.8 MB binary.
+      - wails3 generate webview2bootstrapper -dir "{{.ROOT_DIR}}/build/windows/nsis"
+      # No -D for the executable path: project.nsi defaults it, because a
+      # Windows path handed to makensis on the command line loses its
+      # separators (a backslash in a -D value is an escape).
+      - makensis project.nsi

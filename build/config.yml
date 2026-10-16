@@ -1,0 +1,44 @@
+# Build configuration for Cokpyt (Wails v3)
+version: '3'
+
+info:
+  companyName: "d3uceY"
+  productName: "Cokpyt"
+  productIdentifier: "io.github.d3ucey.cokpyt"
+  description: "A desktop GUI for pip"
+  copyright: "Copyright © 2026 d3uceY"
+  comments: "Built using Wails (https://wails.io)"
+  version: "0.3.0"
+
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  # The frontend has no build step, so there is nothing to watch but source.
+  # The bindings directory is generated and watching it makes the rebuild loop
+  # chase its own output.
+  ignore:
+    dir:
+      - .git
+      - .task
+      - bin
+      - build/bin
+      - frontend/bindings
+      - frontend/assets
+    file:
+      - .DS_Store
+      - .gitignore
+  # The frontend is embedded in the binary, so an edit to it needs the same
+  # rebuild as an edit to Go. Watching only *.go would silently ignore CSS.
+  watched_extension:
+    - "*.go"
+    - "*.js"
+    - "*.css"
+    - "*.html"
+  executes:
+    - cmd: wails3 task bindings
+      type: blocking
+    - cmd: wails3 build DEV=true
+      type: blocking
+    - cmd: wails3 task run
+      type: primary

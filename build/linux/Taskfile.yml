@@ -1,0 +1,35 @@
+version: '3'
+
+includes:
+  common: ../Taskfile.yml
+
+vars:
+  APP_NAME: "Cokpyt"
+  BIN_DIR: "bin"
+
+tasks:
+  build:
+    summary: Builds Cokpyt for Linux
+    deps:
+      - task: common:go:mod:tidy
+      - task: common:generate:bindings
+    cmds:
+      - go build {{.BUILD_FLAGS}} -o "{{.BIN_DIR}}/{{.APP_NAME}}"
+    vars:
+      BUILD_FLAGS: '{{if eq .DEV "true"}}-tags dev -buildvcs=false -gcflags=all="-l"{{else}}-tags production -trimpath -buildvcs=false -ldflags="-w -s"{{end}}'
+    env:
+      GOOS: linux
+      CGO_ENABLED: '1'
+
+  run:
+    summary: Runs the built app
+    cmds:
+      - "{{.BIN_DIR}}/{{.APP_NAME}}"
+
+  package:
+    summary: Stages the binary and a .desktop entry under bin/
+    deps:
+      - task: build
+    cmds:
+      - cp build/linux/desktop "{{.BIN_DIR}}/{{.APP_NAME}}.desktop"
+      - echo "binary at {{.BIN_DIR}}/{{.APP_NAME}}, desktop entry beside it"

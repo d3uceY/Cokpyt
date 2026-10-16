@@ -1,0 +1,47 @@
+# macOS build.
+#
+# Info.plist is committed under build/darwin, so packaging is assembling a
+# bundle from it rather than running a generator.
+
+version: '3'
+
+includes:
+  common: ../Taskfile.yml
+
+vars:
+  APP_NAME: "Cokpyt"
+  BIN_DIR: "bin"
+  BUNDLE: "bin/{{.APP_NAME}}.app"
+
+tasks:
+  build:
+    summary: Builds Cokpyt for macOS
+    deps:
+      - task: common:go:mod:tidy
+      - task: common:generate:bindings
+      - task: common:generate:icons
+    cmds:
+      - go build {{.BUILD_FLAGS}} -o "{{.BIN_DIR}}/{{.APP_NAME}}"
+    vars:
+      BUILD_FLAGS: '{{if eq .DEV "true"}}-tags dev -buildvcs=false -gcflags=all="-l"{{else}}-tags production -trimpath -buildvcs=false -ldflags="-w -s"{{end}}'
+    env:
+      GOOS: darwin
+      CGO_ENABLED: '1'
+
+  run:
+    summary: Runs the built app
+    cmds:
+      - "{{.BIN_DIR}}/{{.APP_NAME}}"
+
+  package:
+    summary: Assembles Cokpyt.app from the built binary and build/darwin/Info.plist
+    deps:
+      - task: build
+    cmds:
+      - rm -rf "{{.BUNDLE}}"
+      - mkdir -p "{{.BUNDLE}}/Contents/MacOS" "{{.BUNDLE}}/Contents/Resources"
+      - cp build/darwin/Info.plist "{{.BUNDLE}}/Contents/Info.plist"
+      - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BUNDLE}}/Contents/MacOS/{{.APP_NAME}}"
+      - cp build/darwin/icons.icns "{{.BUNDLE}}/Contents/Resources/iconfile.icns"
+      - codesign --force --deep --sign - "{{.BUNDLE}}" || true
+      - echo "built {{.BUNDLE}}"
