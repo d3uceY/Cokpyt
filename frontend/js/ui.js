@@ -330,6 +330,90 @@ export function promptDialog({ title, label, placeholder = "", confirm = "Instal
   });
 }
 
+/* ── choosing ─────────────────────────────────────────────────────────────── */
+
+/* chooseDialog asks for one item out of a list that has to be fetched first.
+
+   The fetch starts when the dialog opens rather than before it, so a slow
+   lookup shows as a spinner in a dialog that is already on screen instead of as
+   a row button that looks like it was ignored. `load` resolves to
+   [{ value, label, selected }]. */
+export function chooseDialog({ title, label, load, confirm = "OK" }) {
+  return new Promise((resolve) => {
+    const list = h("select", { class: "select", size: 12, "aria-label": label || title });
+    list.hidden = true;
+
+    const note = h("p", { class: "dialog-text", text: "Looking this up…" });
+    const submit = h(
+      "button",
+      { class: "btn btn-primary", type: "button", disabled: true },
+      confirm,
+    );
+
+    const finish = (value) => {
+      backdrop.remove();
+      document.removeEventListener("keydown", onKey);
+      resolve(value);
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") finish(null);
+      if (event.key === "Enter" && !submit.disabled) finish(list.value);
+    };
+
+    const backdrop = h(
+      "div",
+      { class: "dialog-backdrop", onclick: (event) => event.target === backdrop && finish(null) },
+      h(
+        "div",
+        { class: "dialog", role: "dialog", "aria-modal": "true" },
+        h(
+          "div",
+          { class: "dialog-body" },
+          h("h2", { class: "dialog-title", text: title }),
+          label ? h("p", { class: "dialog-text", text: label }) : null,
+          list,
+          note,
+        ),
+        h(
+          "div",
+          { class: "dialog-actions" },
+          h("button", { class: "btn", type: "button", onclick: () => finish(null) }, "Cancel"),
+          submit,
+        ),
+      ),
+    );
+    submit.addEventListener("click", () => finish(list.value));
+
+    document.addEventListener("keydown", onKey);
+    document.body.append(backdrop);
+
+    load()
+      .then((options) => {
+        if (options.length === 0) {
+          note.textContent = "Nothing to choose from.";
+          return;
+        }
+        replace(
+          list,
+          options.map((option) =>
+            h("option", { value: option.value, selected: option.selected }, option.label),
+          ),
+        );
+        /* The list exists now, so the dialog stops being a status message. The
+           chosen option is whichever the caller marked, falling back to the
+           first, which for a newest-first list is the latest version. */
+        list.hidden = false;
+        if (!list.value) list.selectedIndex = 0;
+        note.textContent = `${options.length} to choose from.`;
+        submit.disabled = false;
+        list.focus();
+      })
+      .catch((error) => {
+        note.textContent = error.message;
+      });
+  });
+}
+
 const MAX_LINES = 1500;
 export const output = {
   lines: [],

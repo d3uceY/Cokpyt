@@ -7,7 +7,17 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { actionCell, confirmDialog, h, icon, panel, promptDialog, replace, toast } from "../ui.js";
+import {
+  actionCell,
+  chooseDialog,
+  confirmDialog,
+  h,
+  icon,
+  panel,
+  promptDialog,
+  replace,
+  toast,
+} from "../ui.js";
 
 const RENDER_LIMIT = 400;
 
@@ -150,6 +160,16 @@ export async function render(ctx) {
           {
             class: "btn btn-sm",
             type: "button",
+            title: `Install a different version of ${pkg.name}`,
+            onclick: () => chooseVersion(ctx, pkg),
+          },
+          "Versions",
+        ),
+        h(
+          "button",
+          {
+            class: "btn btn-sm",
+            type: "button",
             onclick: async () => {
               const yes = await confirmDialog({
                 title: `Uninstall ${pkg.name}?`,
@@ -255,6 +275,39 @@ export async function render(ctx) {
         );
 
   return panel("Installed", body, { toolbar });
+}
+
+/* chooseVersion pins a package to any version pip can install here.
+
+   The list is fetched only after the button is pressed, never while the table
+   is being painted: it is a network round trip per package, and a page that
+   looked up every row would take minutes to render. The installed version is
+   marked and preselected, so the dialog opens pointing at where the user
+   already is — usually the fastest way to find the version they want. */
+async function chooseVersion(ctx, pkg) {
+  const version = await chooseDialog({
+    title: `${pkg.name} - choose a version`,
+    label: `Versions pip can install into ${store.envName(ctx.env)}.`,
+    confirm: "Install",
+    load: async () => {
+      const versions = (await api.versions(ctx.env.python, pkg.name)) || [];
+      return versions.map((value) => ({
+        value,
+        label: value === pkg.version ? `${value} — installed` : value,
+        selected: value === pkg.version,
+      }));
+    },
+  });
+  /* Nothing chosen, or the version already installed: pip would spend a minute
+     unpacking a wheel to end up exactly where it started. */
+  if (!version || version === pkg.version) return;
+
+  ctx.setBusy(true);
+  const ok = await store.operate(ctx.env.python, `Installing ${pkg.name} ${version}`, () =>
+    api.installVersion(ctx.env.python, pkg.name, version),
+  );
+  ctx.setBusy(false);
+  if (ok) ctx.refresh();
 }
 
 async function bulkUninstall(ctx, selection, paintSelection) {

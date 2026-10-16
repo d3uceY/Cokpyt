@@ -31,7 +31,9 @@ export const api = {
 
   packages: (python) => call(App.Packages, python),
   outdated: (python) => call(App.Outdated, python),
+  versions: (python, name) => call(App.Versions, python, name),
   install: (python, spec) => call(App.Install, python, spec),
+  installVersion: (python, name, version) => call(App.InstallVersion, python, name, version),
   upgrade: (python, name) => call(App.Upgrade, python, name),
   uninstall: (python, name) => call(App.Uninstall, python, name),
   upgradeMany: (python, names) => call(App.UpgradeMany, python, names),
