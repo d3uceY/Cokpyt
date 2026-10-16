@@ -37,15 +37,16 @@ Open a GitHub issue and prefix the title with `[Feature]`. Describe the problem 
 
 | Tool | Version |
 |---|---|
-| [Go](https://go.dev/dl/) | 1.21 or later |
-| [Node.js](https://nodejs.org/) | 18 or later |
-| [Wails CLI](https://wails.io/docs/gettingstarted/installation) | v2 |
+| [Go](https://go.dev/dl/) | 1.23 or later |
+| [Wails CLI](https://wails.io/docs/gettingstarted/installation) | v3 |
 
-Install the Wails CLI:
+Install the Wails v3 CLI:
 
 ```bash
-go install github.com/wailsapp/wails/v2/cmd/wails@latest
+go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 ```
+
+Node.js is not required. There is no frontend build step.
 
 ### Clone and Run
 
@@ -53,25 +54,28 @@ go install github.com/wailsapp/wails/v2/cmd/wails@latest
 git clone https://github.com/d3uceY/Cokpyt.git
 cd Cokpyt
 
-# Install frontend dependencies
-cd frontend && npm install && cd ..
+# Rebuild on every Go change
+wails3 dev
+```
 
-# Start the dev server (hot reload on both Go and React changes)
-wails dev
+`wails3 dev` regenerates the frontend bindings, builds, and runs. Day to day the other commands are:
+
+```bash
+wails3 task test       # go test ./...
+wails3 task compile    # regenerate bindings, then build
+wails3 task run        # run the binary that is already built
+node scripts/check-frontend.mjs   # parse every frontend module
 ```
 
 ### Build a Production Binary
 
 ```bash
-# Windows
-wails build --target windows/amd64 --nsis
-
-# macOS (universal binary)
-wails build --target darwin/universal
-
-# Linux
-wails build --target linux/amd64
+wails3 build       # current OS
+wails3 package     # NSIS installer on Windows, .app bundle on macOS
 ```
+
+Cross-compiling is a matter of setting `GOOS` and `GOARCH`. Linux and macOS builds need `CGO_ENABLED=1`
+and a platform toolchain; Windows builds do not.
 
 ---
 

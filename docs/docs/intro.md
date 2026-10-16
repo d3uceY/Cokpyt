@@ -24,31 +24,34 @@ You work in Python. You use `pip`. But every time you need to manage your packag
 
 **Cokpyt is the GUI you always wished pip shipped with.**
 
-Built with Go and React on top of the [Wails](https://wails.io) framework, it puts your entire Python environment on a clear dashboard. Browse every installed package, search all of PyPI, install and upgrade and uninstall with a click, run a full environment health check, and see a logged history of every pip action you have ever taken.
+Built with Go on top of the [Wails](https://wails.io) framework and a plain HTML, CSS and JavaScript frontend, it puts *every* Python environment on your machine on one dashboard. Browse every installed package, search all of PyPI, install and upgrade and uninstall with a click, run a full environment health check, and see a logged history of every pip action you have ever taken.
 
 ## Feature Overview
 
 | Feature | What it does |
 |---|---|
-| [Dashboard](./features/dashboard) | Real-time overview of your environment: total packages, pending updates, Python & pip versions, recent activity |
-| [Installed Packages](./features/installed-packages) | Browse, filter, install, uninstall, and bulk-manage every package in your environment |
+| [Environments](./features/environments) | Every Python environment on the machine — launcher runtimes, standalone installs, venvs and conda envs — with the packages each one holds |
+| [Dashboard](./features/dashboard) | Real-time overview: how many environments hold packages, package counts, pending updates, recent activity |
+| [Installed Packages](./features/installed-packages) | Browse, filter, install, uninstall, and bulk-manage every package in the active environment |
 | [Updates](./features/updates) | See every outdated package with version diffs; upgrade one, a selection, or all at once |
 | [Search](./features/search) | Query PyPI instantly and install any result with one click |
-| [Doctor](./features/doctor) | Health check for Python, pip, and PyPI connectivity with actionable fix hints |
+| [Doctor](./features/doctor) | Health check for the interpreter, its pip, and PyPI connectivity, with actionable fix hints |
 | [History](./features/history) | Permanent audit trail of every install, upgrade, and uninstall with timestamps |
 | [Cleanup](./features/cleanup) | Reclaim disk space by clearing pip caches, `.egg-info` dirs, and `__pycache__` folders |
-| [Logs](./features/logs) | Raw pip output streamed live; filterable by keyword and severity after the fact |
-| [Environments](./features/environment) | Register, switch between, and manage Python virtual environments |
-| [Settings](./features/settings) | Toggle light/dark theme and replay the guided tour |
+| [Settings](./features/settings) | Toggle light/dark theme, check for updates, and inspect the active environment |
+
+Every pip operation streams into a console panel at the bottom of the window, so pip's own output is
+visible while it works.
 
 ## Tech Stack
 
-Cokpyt is built on a modern, open-source stack:
+Cokpyt is built on a deliberately small stack:
 
-- **[Wails v2](https://wails.io)** - Go backend, web frontend, one native binary per platform
-- **[React](https://react.dev) + [TypeScript](https://www.typescriptlang.org)** - frontend UI
-- **[TanStack Query](https://tanstack.com/query)** - data fetching and cache invalidation
-- **[Tailwind CSS](https://tailwindcss.com)** - utility-first styling
+- **[Wails v3](https://wails.io)** - Go backend, web frontend, one native binary per platform
+- **Plain HTML, CSS and ES modules** - no framework and no build step; the files in `frontend/` are
+  what the webview is served
+- **Generated ES module bindings** - `wails3 generate bindings -b` turns every public Go service
+  method into a callable JavaScript function
 
 ## Next Steps
 
