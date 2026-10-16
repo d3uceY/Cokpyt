@@ -215,14 +215,26 @@ func (a *App) Packages(python string) ([]pip.Package, error) {
 	return pip.List(env)
 }
 
-// Outdated lists packages with a newer version on PyPI. It is the only call
-// here that needs the network, which is why it is separate from Packages.
+// Outdated lists packages with a newer version on PyPI. It needs the network,
+// which is why it is separate from Packages.
 func (a *App) Outdated(python string) ([]pip.Outdated, error) {
 	env, ok := a.resolve(python)
 	if !ok {
 		return nil, unknown(python)
 	}
 	return pip.ListOutdated(env)
+}
+
+// Versions lists the versions of one package that pip could install into an
+// environment, newest first. It is the only call the frontend makes for a
+// single row rather than for a page: it costs a network round trip, and the
+// Packages page has hundreds of rows.
+func (a *App) Versions(python, name string) ([]string, error) {
+	env, ok := a.resolve(python)
+	if !ok {
+		return nil, unknown(python)
+	}
+	return pip.Versions(env, strings.TrimSpace(name))
 }
 
 // Install installs a requirement into an environment.
@@ -232,6 +244,15 @@ func (a *App) Install(python, spec string) error {
 		return unknown(python)
 	}
 	return pip.Install(env, strings.TrimSpace(spec))
+}
+
+// InstallVersion pins a package to one exact version.
+func (a *App) InstallVersion(python, name, version string) error {
+	env, ok := a.resolve(python)
+	if !ok {
+		return unknown(python)
+	}
+	return pip.InstallVersion(env, strings.TrimSpace(name), strings.TrimSpace(version))
 }
 
 // Upgrade upgrades one package.

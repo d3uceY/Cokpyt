@@ -119,6 +119,55 @@ func TestLastNonEmptyLine(t *testing.T) {
 }
 
 /*
+parseVersions has to survive the whole of what `pip index versions` prints.
+Everything below the marker is real output from pip 26: the package and its
+latest version on the first line, the installed and latest pair indented at the
+end, and the upgrade notice, which arrives on stderr and so is folded into the
+same buffer by CombinedOutput. Only the marker line may be read, and the order
+must be pip's, because it is PEP 440 order and a string sort is not.
+*/
+func TestParseVersions(t *testing.T) {
+	output := "requests (2.34.2)\n" +
+		"Available versions: 2.34.2, 2.34.1, 2.33.1, 0.12.1, 0.12.0\n" +
+		"  INSTALLED: 2.32.5\n" +
+		"  LATEST:    2.34.2\n" +
+		"\n" +
+		"[notice] A new release of pip is available: 26.0.1 -> 26.2.1\n" +
+		"[notice] To update, run: python.exe -m pip install --upgrade pip\n"
+
+	versions, ok := parseVersions(output)
+	if !ok {
+		t.Fatalf("parseVersions reported no list")
+	}
+	want := []string{"2.34.2", "2.34.1", "2.33.1", "0.12.1", "0.12.0"}
+	if len(versions) != len(want) {
+		t.Fatalf("parseVersions returned %d versions, want %d: %v", len(versions), len(want), versions)
+	}
+	for i := range want {
+		if versions[i] != want[i] {
+			t.Errorf("version %d = %q, want %q", i, versions[i], want[i])
+		}
+	}
+
+	// A single version is still a list, and pip writes it the same way.
+	if got, ok := parseVersions("thing (1.0.0)\nAvailable versions: 1.0.0\n"); !ok || len(got) != 1 || got[0] != "1.0.0" {
+		t.Errorf("parseVersions on one version = %v, %v", got, ok)
+	}
+
+	// The two failures that must not be reported as an empty list: pip's
+	// "no matching distribution" for an unknown name, and no output at all.
+	for name, out := range map[string]string{
+		"unknown package": "ERROR: No matching distribution found for zzz-nothing-on-pypi\n",
+		"empty":           "",
+		"marker only":     "Available versions: \n",
+	} {
+		if got, ok := parseVersions(out); ok {
+			t.Errorf("%s: parseVersions = %v, want not ok", name, got)
+		}
+	}
+}
+
+/*
 failureReason exists so a failed pip call reports pip's own explanation
 
 	rather than Go's "exit status 1".

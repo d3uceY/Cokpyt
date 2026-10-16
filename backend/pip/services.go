@@ -290,9 +290,20 @@ func pickSitePackages(candidates []string) string {
 
 // Install installs spec. It may pin a version ("requests==2.32.0") or point at
 // a path or a URL, because pip accepts all of those and there is no reason for
-// the app to accept less.
+// the app to accept less. A version chosen from the version picker goes through
+// InstallVersion instead, so the two are recorded in History differently: this
+// one keeps whatever the user typed, that one reports the bare package name.
 func Install(env environments.Env, spec string) error {
 	return runStreaming(env, "install", "install", spec)
+}
+
+// InstallVersion pins an installed package to one exact version.
+//
+// There is no "downgrade" command in pip and none here: asking for a version
+// the environment does not have makes pip uninstall the current one and
+// install the requested one, which is the same operation in either direction.
+func InstallVersion(env environments.Env, name, version string) error {
+	return runStreamingFor(env, name, "install", "install", name+"=="+version)
 }
 
 // Upgrade upgrades one package to the newest version its metadata allows.
@@ -308,7 +319,14 @@ func Uninstall(env environments.Env, name string) error {
 // runStreaming runs a pip command, forwards every output line to the log, and
 // records the outcome in History.
 func runStreaming(env environments.Env, action string, args ...string) error {
-	target := nameFrom(args)
+	return runStreamingFor(env, nameFrom(args), action, args...)
+}
+
+// runStreamingFor is runStreaming with the name recorded in History given
+// explicitly. A pinned requirement ("requests==2.32.5") is not a package name:
+// it reads badly in History, and the "Successfully installed" lookup matches on
+// "requests-", so it would fail to find the version it just installed.
+func runStreamingFor(env environments.Env, target, action string, args ...string) error {
 	command := fmt.Sprintf("%s -m pip %s", env.Python, strings.Join(args, " "))
 	emitLog("INFO", fmt.Sprintf("[%s] pip %s", env.Label, strings.Join(args, " ")))
 
@@ -377,6 +395,57 @@ func installedVersion(output, name string) string {
 // ── PyPI metadata ────────────────────────────────────────────────────────────
 
 var httpClient = &http.Client{Timeout: 30 * time.Second}
+
+// Versions lists every version of a package that could be installed into this
+// environment, newest first.
+//
+// "Which versions exist?" has two answers on PyPI and only one of them is
+// useful here. The JSON API's releases map holds every file ever uploaded,
+// including prereleases, yanked releases, and versions with no build for this
+// platform; asking pip answers with the set an install would actually be able
+// to resolve, so a version offered in the picker is a version that installs.
+// That filtering is also why this shells out to pip rather than reading PyPI
+// directly, and why the list arrives in the order the picker wants: pip sorts
+// by PEP 440, which no string comparison gets right — "0.12.01" sorts above
+// "0.12.1", and "2.34.0.dev1" lands wherever the alphabet puts it.
+func Versions(env environments.Env, name string) ([]string, error) {
+	// CombinedOutput, not Output: "no matching distribution" is pip's last word
+	// on stderr and failureReason is what turns it into the error message.
+	out, err := env.Pip("index", "versions", name).CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("could not list versions of %s: %s", name, failureReason(out, err))
+	}
+	if versions, ok := parseVersions(string(out)); ok {
+		return versions, nil
+	}
+	return nil, fmt.Errorf("pip reported no versions of %s", name)
+}
+
+// parseVersions reads the "Available versions: a, b, c" line out of `pip index
+// versions` output.
+//
+// The output carries lines this does not want — the package and its latest
+// version on the first line, the installed and latest version indented at the
+// end, and pip's upgrade notice on stderr, which CombinedOutput folds in.
+// Only the one line that names the marker is read, and only its right-hand
+// side, so none of those can be mistaken for a version.
+func parseVersions(output string) ([]string, bool) {
+	const marker = "Available versions:"
+	for _, line := range strings.Split(output, "\n") {
+		rest, ok := strings.CutPrefix(strings.TrimSpace(line), marker)
+		if !ok {
+			continue
+		}
+		versions := []string{}
+		for _, version := range strings.Split(rest, ",") {
+			if version = strings.TrimSpace(version); version != "" {
+				versions = append(versions, version)
+			}
+		}
+		return versions, len(versions) > 0
+	}
+	return nil, false
+}
 
 // changelogURL looks for a changelog link in a package's PyPI metadata so the
 // Updates page can offer "what changed" before an upgrade.
