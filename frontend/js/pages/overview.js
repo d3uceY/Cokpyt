@@ -160,10 +160,6 @@ function activity() {
    paragraph that says the thing the app is for, and a dismiss button. */
 export async function intro() {
   if (await api.introSeen().catch(() => true)) return null;
-  const node = note(
-    "Cokpyt found every Python environment on this machine, not just the one pip would have shown you. Switch environments from the sidebar; every page follows.",
-    "info",
-  );
   const dismiss = h(
     "button",
     {

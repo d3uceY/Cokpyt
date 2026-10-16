@@ -12,7 +12,7 @@ export const meta = {
   eyebrow: "Machine",
   title: "Environments",
   subtitle:
-    "Every Python environment Cokpyt could find, and how many packages each one holds. Pick one and the rest of the app works inside it.",
+    "Every Python environment Cokpyt could find.",
 };
 
 export let needsEnvironment = false;
@@ -72,10 +72,6 @@ export async function render(ctx) {
     "div",
     { class: "stack" },
     store.state.notes.length ? h("div", { class: "stack" }, store.state.notes.map((text) => note(text, "warn"))) : null,
-    note(
-      "Cokpyt looks in the py launcher, the usual install directories, and every pyvenv.cfg and conda-meta marker under your home folder. Projects on another drive are found with “Scan a folder”.",
-      "info",
-    ),
     panel(
       "Found on this machine",
       environmentsTable(ctx, counts, { expand: true }),

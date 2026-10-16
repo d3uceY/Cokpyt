@@ -10,7 +10,7 @@ import { confirmDialog, formatBytes, h, icon, loading, panel, plural, replace, t
 export const meta = {
   eyebrow: "Active environment",
   title: "Cleanup",
-  subtitle: "Leftovers pip and Python leave behind, and what removing them would free.",
+  subtitle: "Leftovers pip and Python leave behind.",
 };
 
 export async function render(ctx) {

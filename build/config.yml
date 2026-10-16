@@ -17,24 +17,42 @@ dev_mode:
   # The frontend has no build step, so there is nothing to watch but source.
   # The bindings directory is generated and watching it makes the rebuild loop
   # chase its own output.
+  #
+  # Two things here are load-bearing and easy to break:
+  #
+  # `watched_extension` must be nested under `ignore` - that is where the
+  # watcher's config struct keeps it. At the `dev_mode` level it is an unknown
+  # key that gets dropped without a warning, the filter falls back to "watch
+  # everything", and the build then retriggers itself through its own outputs.
+  #
+  # Each `dir` entry is compared against a single component of the *absolute*
+  # event path, so a nested entry like `frontend/bindings` matches nothing at
+  # all. Only bare directory names work here.
   ignore:
     dir:
       - .git
       - .task
       - bin
-      - build/bin
-      - frontend/bindings
-      - frontend/assets
+      - bindings
+      - assets
+      # `wails3 generate bindings --clean` stages its output in a dot-prefixed
+      # sibling of the bindings directory and then syncs it in, so the generated
+      # .js files appear under frontend/.bindings-tmp-<random>, not under
+      # frontend/bindings. Those writes are watched, reset the debounce timer and
+      # start the next build, which stages again - an endless reload loop. This
+      # entry has to be a glob because the suffix is random; `dir` entries are
+      # glob-matched against the whole path as well as being compared by name.
+      - "*.bindings-tmp-*"
     file:
       - .DS_Store
       - .gitignore
-  # The frontend is embedded in the binary, so an edit to it needs the same
-  # rebuild as an edit to Go. Watching only *.go would silently ignore CSS.
-  watched_extension:
-    - "*.go"
-    - "*.js"
-    - "*.css"
-    - "*.html"
+    # The frontend is embedded in the binary, so an edit to it needs the same
+    # rebuild as an edit to Go. Watching only *.go would silently ignore CSS.
+    watched_extension:
+      - "*.go"
+      - "*.js"
+      - "*.css"
+      - "*.html"
   executes:
     - cmd: wails3 task bindings
       type: blocking
