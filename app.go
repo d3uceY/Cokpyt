@@ -145,7 +145,7 @@ func (a *App) ScanFolder(dir string) ([]environments.Env, error) {
 // ChooseFolder opens the native directory picker.
 func (a *App) ChooseFolder() (string, error) {
 	return a.app.Dialog.OpenFile().
-		SetTitle("Choose a folder to look for environments in").
+		SetTitle("Choose a folder to scan for environments").
 		CanChooseFiles(false).
 		CanChooseDirectories(true).
 		PromptForSingleSelection()
@@ -552,5 +552,5 @@ func unknown(python string) error {
 	if python == "" {
 		return errors.New("no Python environment is selected")
 	}
-	return fmt.Errorf("no environment is using %s any more", python)
+	return fmt.Errorf("no environment uses %s any more", python)
 }
