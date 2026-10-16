@@ -48,7 +48,7 @@ func checkInterpreter(env environments.Env) Check {
 			Name:   "Interpreter",
 			Status: "fail",
 			Detail: fmt.Sprintf("%s cannot be run", env.Python),
-			Hint:   "The interpreter may have been moved or deleted since it was installed.",
+			Hint:   "It may have been moved or deleted since install.",
 			FixURL: "https://www.python.org/downloads/",
 		}
 	}
@@ -57,7 +57,7 @@ func checkInterpreter(env environments.Env) Check {
 		return Check{
 			Name:   "Interpreter",
 			Status: "warn",
-			Detail: "Python " + version + " — Python 2 has no pip support left",
+			Detail: "Python " + version + " no longer supports pip",
 			Hint:   "Upgrade to Python 3.8 or newer for full pip support.",
 			FixURL: "https://www.python.org/downloads/",
 		}
@@ -75,7 +75,7 @@ func checkPip(env environments.Env) Check {
 		return Check{
 			Name:   "pip",
 			Status: "fail",
-			Detail: "this environment has no pip",
+			Detail: "no pip in this environment",
 			Hint:   "Run: " + env.Python + " -m ensurepip --upgrade",
 			FixURL: "https://pip.pypa.io/en/stable/installation/",
 		}
@@ -107,7 +107,7 @@ func checkPyPI() Check {
 			Name:   "PyPI",
 			Status: "warn",
 			Detail: fmt.Sprintf("pypi.org returned HTTP %d", resp.StatusCode),
-			Hint:   "PyPI itself may be having trouble — check status.python.org.",
+			Hint:   "Check status.python.org for an outage.",
 			FixURL: "https://status.python.org/",
 		}
 	}
