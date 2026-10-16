@@ -28,8 +28,13 @@
 
       <div class="env-picker">
         <span class="eyebrow">Environment</span>
-        <select id="env-select" class="select" aria-label="Active Python environment"></select>
-        <button type="button" class="btn btn-ghost btn-sm" id="env-rescan">
+        <select id="env-select" class="select" aria-label="Active environment"></select>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          id="env-rescan"
+          title="Look for environments again"
+        >
           <span data-icon="refresh" data-size="14"></span>
           <span id="env-rescan-label">Rescan</span>
         </button>
@@ -38,7 +43,7 @@
       <nav class="nav" id="nav" aria-label="Sections"></nav>
 
       <div class="sidebar-foot">
-        <span class="status-dot" id="env-health" title="Active environment state"></span>
+        <span class="status-dot" id="env-health" title="Environment state"></span>
         <span class="eyebrow" id="version-label">v0.3.0</span>
         <button
           type="button"
