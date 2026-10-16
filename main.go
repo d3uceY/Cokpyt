@@ -42,10 +42,10 @@ func main() {
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Cokpyt",
-		Width:            1280,
-		Height:           840,
-		MinWidth:         960,
-		MinHeight:        620,
+		Width:            800,
+		Height:           600,
+		MinWidth:         700,
+		MinHeight:        640,
 		InitialPosition:  application.WindowCentered,
 		BackgroundColour: application.NewRGBA(245, 247, 248, 255),
 		URL:              "/",
