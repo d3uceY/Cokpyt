@@ -21,7 +21,7 @@ Each row in the table represents one installed package and shows:
 | **Latest** | Newest version available on PyPI — highlighted green when an update is available |
 | **Source** | Always **PyPI** for pip-managed packages |
 | **Status** | **Up to date** (green) or **Outdated** (amber) based on whether a newer version exists |
-| **Actions** | Per-row **Upgrade** and **Uninstall** buttons; Upgrade is only active when the package is outdated |
+| **Actions** | Per-row **Upgrade**, **Versions** and **Uninstall** buttons |
 
 The table is paginated for large environments and stays responsive even with hundreds of packages.
 
@@ -52,6 +52,18 @@ A live terminal panel slides in at the bottom of the screen and streams the pip 
 Click the **Upgrade** button on any row to run `pip install --upgrade <package>` for that package. The live terminal panel shows the output; the table refreshes when done.
 
 To upgrade every outdated package at once, use the **Update All** button on either this page or the [Dashboard](./dashboard).
+
+---
+
+## Choosing a Specific Version
+
+Click **Versions** on any row to pick any version pip can install, not just the latest. Upgrading and downgrading are the same button, so a version you pinned for a reason is reachable again without leaving the app.
+
+The list is fetched when you press the button, not when the page loads, because it is a network lookup per package. The version you have installed is marked, and the dialog opens on it — scroll up for newer versions, down for older ones. Versions are listed newest first, in pip's own order.
+
+Only versions pip could actually install into that environment are offered. Prereleases, yanked releases and releases with no build for your platform are already filtered out, so every version in the list is one that will install. Picking the version that is already installed does nothing.
+
+The install runs as `pip install <package>==<version>`, which makes pip replace whatever is there. The live terminal panel shows the output, and the table refreshes when it finishes. The result is recorded in [History](./history) under the package's own name rather than the pinned requirement.
 
 ---
 
