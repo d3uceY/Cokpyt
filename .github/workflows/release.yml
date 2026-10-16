@@ -14,32 +14,28 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: go.mod
 
       - name: Install Linux dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.0-dev
+          sudo apt install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
-
-      - name: Install frontend dependencies
-        run: npm install
-        working-directory: frontend
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
       - name: Build
-        run: wails build -clean
+        run: wails3 build
 
       - name: Rename Linux binary
         run: |
-          mkdir -p build/bin/renamed
-          mv build/bin/Cokpyt build/bin/renamed/Cokpyt-linux-amd64
+          mkdir -p bin/renamed
+          mv bin/Cokpyt bin/renamed/Cokpyt-linux-amd64
 
       - uses: actions/upload-artifact@v4
         with:
           name: binaries-linux-amd64
-          path: build/bin/renamed/*
+          path: bin/renamed/*
 
 
   build-macos:
@@ -49,28 +45,24 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: go.mod
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
-
-      - name: Install frontend dependencies
-        run: npm install
-        working-directory: frontend
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
       - name: Build
-        run: wails build -clean
+        run: wails3 package
 
       - name: Package macOS binary
         run: |
-          mkdir -p build/bin/renamed
-          cd build/bin
+          mkdir -p bin/renamed
+          cd bin
           zip -r renamed/Cokpyt-macos-amd64.zip Cokpyt.app
 
       - uses: actions/upload-artifact@v4
         with:
           name: binaries-macos
-          path: build/bin/renamed/*
+          path: bin/renamed/*
 
 
   build-windows-amd64:
@@ -80,7 +72,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: go.mod
 
       - name: Install NSIS
         run: |
@@ -88,29 +80,25 @@ jobs:
           echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
-
-      - name: Install frontend dependencies
-        run: npm install
-        working-directory: frontend
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
       - name: Build
-        run: wails build -nsis
+        run: wails3 package
 
       - name: Rename Windows outputs
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path build\bin\renamed
-          Move-Item build\bin\Cokpyt.exe build\bin\renamed\Cokpyt-windows-amd64.exe
-          $installer = Get-ChildItem build\bin\*installer.exe -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path bin\renamed
+          Move-Item bin\Cokpyt.exe bin\renamed\Cokpyt-windows-amd64.exe
+          $installer = Get-ChildItem bin\*installer.exe -ErrorAction SilentlyContinue
           if ($installer) {
-            Move-Item $installer.FullName build\bin\renamed\Cokpyt-windows-installer.exe
+            Move-Item $installer.FullName bin\renamed\Cokpyt-windows-installer.exe
           }
 
       - uses: actions/upload-artifact@v4
         with:
           name: binaries-windows-amd64
-          path: build/bin/renamed/*
+          path: bin/renamed/*
 
 
   release:
