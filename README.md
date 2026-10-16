@@ -23,9 +23,31 @@ You work in Python. You use pip. You know your way around the PyPI ecosystem. Bu
 
 **Cokpyt is the GUI you always wished pip shipped with.**
 
-It is a lightweight, fast desktop app built with Go and React that puts your entire Python environment on a clear dashboard. Browse every installed package, search all of PyPI, install and upgrade and uninstall with a click, run a full environment health check, and see a logged history of every pip action you have ever taken -- all without touching the command line once.
+It is a lightweight desktop app, built with Go and a plain HTML/CSS/JavaScript frontend, that finds *every* Python environment on your machine and puts all of them on one dashboard. Browse the packages in each one, search all of PyPI, install and upgrade and uninstall with a click, run an environment health check, and read a logged history of every pip action you have taken — all without touching the command line once.
 
-If you live in the pip and PyPI ecosystem and the CLI is not your thing, Cokpyt was built for you.
+---
+
+## Why "every environment" matters
+
+`pip list` answers a narrower question than it looks like it does. It reports the packages of **one** interpreter. On a machine with a launcher, a couple of runtimes and a few project venvs, that is a fraction of the answer — and the fraction it misses is usually the one you wanted, because the packages a project actually needs live in its own environment, not in the base interpreter.
+
+Cokpyt inventories all of them, using the only reliable source for each:
+
+| Holder | How it is found |
+|---|---|
+| A runtime the `py` launcher installed | `py -0p` |
+| A runtime a python.org installer dropped somewhere | scanning the usual install directories, including `%LOCALAPPDATA%\Programs\Python` and `C:\Python*` |
+| A virtual environment | a `pyvenv.cfg` file at the environment root |
+| A conda environment | a `conda-meta` directory at the environment root |
+
+The sweep has **no depth limit on purpose**. A venv five levels down is normal, and a depth cap is how you get a clean-looking empty result that is simply wrong. It is bounded in *work* instead, and says so if it had to stop early.
+
+Two traps are handled explicitly:
+
+- **The Microsoft Store stub.** On a machine with no real Python on `PATH`, `python` resolves to a `WindowsApps` shim that opens the Store or fails with "Python was not found". A stub on `PATH` says nothing about what is installed, so Cokpyt says so and uses the environments it found.
+- **Launcher shims.** The Python Install Manager keeps redirecting `python.exe` files in its `bin` directory. They answer `--version` correctly because they exec the real interpreter, but they own no packages. Cokpyt asks every interpreter where it *actually* lives and folds the shim onto its target, so you get one row per runtime instead of two.
+
+On the machine this was written on, that difference is four environments and 57 packages, against the one environment and 39 packages a bare `pip list` reports.
 
 ---
 
@@ -45,123 +67,127 @@ Or browse all releases and release notes on the [Releases page](https://github.c
 
 ## Features at a Glance
 
-- **Dashboard** -- a real-time overview of your Python environment, installed packages, and pending updates
-- **Installed Packages** -- browse, filter, install, uninstall, and bulk-manage every package in your active environment
-- **Updates** -- see every package that is behind and upgrade them one by one or all at once
-- **Search** -- query PyPI instantly and install any package directly from the results
-- **Doctor** -- a full health check that verifies Python, pip, and PyPI connectivity with actionable fix hints
-- **History** -- a permanent audit trail of every install, upgrade, and uninstall action
-- **Logs** -- raw pip output, streamed live to the app as commands run
-- **Cleanup** -- find and remove pip caches, `.egg-info` directories, and `__pycache__` to reclaim disk space
+- **Environments** — every interpreter and virtual environment on the machine, with the package count each one holds
+- **Overview** — a real-time summary of the machine, plus recent activity
+- **Installed Packages** — browse, filter, install, uninstall, and bulk-manage the active environment
+- **Updates** — every package that is behind, with the size of the version jump, upgradeable one at a time or all at once
+- **Search** — query PyPI and install anything directly from the results
+- **Doctor** — checks the interpreter, its pip, and PyPI connectivity, with concrete fix hints
+- **History** — a permanent audit trail of every install, upgrade, and uninstall
+- **Cleanup** — measure and then remove pip caches, `.egg-info` directories, and `__pycache__` folders
+- **Console** — pip's own output, streamed live while it works
 
 ---
 
 ## How to Use Cokpyt
 
-### 1. Dashboard
+### 1. Environments
 
-When you open Cokpyt you land on the **Overview** page. It shows three stat cards at the top -- total installed packages, how many are outdated, and your active Python and pip versions. Below that is a grid showing recent activity and a breakdown of pending updates by bump type (major, minor, patch).
+The sidebar picker names the environment every other page is working in. Click it to switch, or open the **Environments** page for the full list.
 
-Click **Refresh** in the top-right to re-fetch all data from your live environment. Click **Update All** to upgrade every outdated package in one shot.
+Each row shows how the environment was found (`launcher`, `standalone`, `venv`, `conda`), its Python version, how many packages it holds, and where it lives. Click a row or its **Use** button to make it active; **Open** reveals it in your file manager.
+
+Use **Scan a folder** if your projects live on another drive. **Rescan** re-inventories the machine — you should rarely need it, since Cokpyt notices new environments on its own.
 
 ---
 
-### 2. Installed Packages
+### 2. Overview
 
-Go to **Installed Packages** in the sidebar to see a full table of every package in your active Python environment.
+Three stat cards at the top: how many environments exist, how many packages they hold between them, and how many updates are waiting in the active environment. Below that is the environment list and your recent activity.
 
-- **Search / filter** -- type in the filter box to narrow the list down by name or description
-- **Install** -- click the blue **pip install** button, type a package name (you can include a version like `requests==2.32.0`), and press Enter or click Install
-- **Upgrade** a single package -- click the **Upgrade** button on any row
-- **Uninstall** a single package -- click **Uninstall** on any row, confirm the dialog
-- **Bulk uninstall** -- check the checkboxes next to multiple packages, then click **Bulk Uninstall**
+The numbers are deliberately about the *machine*. "39 installed packages" is a true sentence about one interpreter and a misleading sentence about your computer, and that confusion is what Cokpyt exists to remove.
 
-A live terminal panel slides in at the bottom of the screen when any operation is running so you can follow the pip output in real time.
+---
+
+### 3. Installed Packages
+
+A full table of everything in the active environment.
+
+- **Filter** by name or description
+- **Install** — click the blue **Install** button and type a package name; a version pin, a path or a URL all work, because pip accepts them
+- **Upgrade** or **Uninstall** a single package from its row
+- **Bulk uninstall** — tick several rows and use the button that appears
+
+The **Latest** column fills in behind the list while PyPI is queried, so the page never waits on the network to render.
 
 <div align="center"><img src="readme/asssets/installed_packages.png" alt="Installed Packages page" width="100%" /></div>
 
 ---
 
-### 3. Updates
+### 4. Updates
 
-Go to **Updates** to see every package that has a newer version available on PyPI. Each row shows the current version, the latest version, and whether the jump is a major, minor, or patch bump.
+Every package in the active environment with a newer version on PyPI, showing the installed version, the latest version, and whether the jump is a major, minor or patch bump. **Upgrade** a single row, or **Upgrade all**.
 
-Click **Upgrade** on a single row to update that package. Click **Update All** in the header to upgrade everything at once.
+Where a package publishes one, a link opens its changelog so you can see what changed before you commit.
 
 <div align="center"><img src="readme/asssets/updates.png" alt="Updates page" width="100%" /></div>
 
 ---
 
-### 4. Search
+### 5. Search
 
-Go to **Search** and type any package name or keyword. Cokpyt queries the PyPI index and shows results with the package name, version, and description. Click **Install** on any result to add it to your environment immediately.
+Type a package name and Cokpyt queries the PyPI index, with real descriptions pulled from package metadata. Anything already installed is marked, and a click installs it into the active environment.
 
 <div align="center"><img src="readme/asssets/search.png" alt="Search page" width="100%" /></div>
 
 ---
 
-### 5. Doctor
+### 6. Doctor
 
-Go to **Doctor** and click **Re-run checks**. Cokpyt runs a suite of diagnostics against your environment:
-
-- Is Python reachable and executable?
-- Is pip installed and up to date?
-- Can the machine reach PyPI?
-- Is there a virtual environment active?
-
-Each check comes back as **Passed**, **Warning**, or **Failed**. Warnings and failures include a plain-English explanation of the problem and a concrete suggestion for how to fix it.
+Three checks for the active environment: can the interpreter run, does it have a working pip, and is PyPI reachable. Each result is **passed**, a **warning**, or a **failure**, and anything wrong comes with a concrete next step.
 
 <div align="center"><img src="readme/asssets/doctor.png" alt="Doctor page" width="100%" /></div>
 
 ---
 
-### 6. History
+### 7. History
 
-Every install, upgrade, and uninstall that Cokpyt runs is logged to the **History** page with the package name, version, action type, exit status, and timestamp.
+Every install, upgrade and uninstall Cokpyt has run, with the package, version, result and timestamp. Hover a row for the exact command. Filter by action, export the lot as CSV, or clear the record.
 
-- **Filter by action** -- click the All / Install / Upgrade / Uninstall tabs to narrow the view
-- **Expand a row** -- click any row to see the full pip command that was run
-- **Export CSV** -- download the full history as a CSV file for your own records
-- **Clear All** -- wipe the history log (two-step confirmation required)
+Only actions run from this app are listed — anything you did in a terminal lives only in that terminal.
 
 <div align="center"><img src="readme/asssets/history.png" alt="History page" width="100%" /></div>
 
 ---
 
-### 7. Cleanup
+### 8. Cleanup
 
-Go to **Cleanup** to scan for space wasted by pip internals. Cokpyt checks the size of:
-
-- the pip download cache
-- leftover `.egg-info` directories
-- stale `__pycache__` folders
-
-Select what you want to remove and click **Run Cleanup**. Cokpyt deletes the selected artefacts and shows you how much space was recovered.
+Cokpyt measures the pip download cache, leftover `.egg-info` directories and `__pycache__` folders, and tells you what removing them would free before it deletes anything. Select what you want gone and run it.
 
 <div align="center"><img src="readme/asssets/cleanup.png" alt="Cleanup page" width="100%" /></div>
 
 ---
 
-### 8. Logs
+### 9. Console
 
-The **Logs** page shows raw application logs from the current session -- useful if something behaves unexpectedly and you want to see exactly what pip returned. Logs are tagged by severity level (INFO, WARN, ERROR).
-
-<div align="center"><img src="readme/asssets/logs.png" alt="Logs page" width="100%" /></div>
+Any pip operation opens a console panel at the bottom of the window and streams pip's own output as it runs. **copy** puts the whole transcript on your clipboard, which is the fastest thing to paste into a bug report.
 
 ---
 
 ## Built With
 
-- [Wails](https://wails.io) -- Go backend, web frontend, one binary
-- [React](https://react.dev) + [TypeScript](https://www.typescriptlang.org)
-- [TanStack Query](https://tanstack.com/query) for data fetching
-- [Tailwind CSS](https://tailwindcss.com)
+- [Wails v3](https://wails.io) — Go backend, web frontend, one binary
+- Plain HTML, CSS and ES modules — no framework, no bundler, no build step
+- ES module bindings generated from the Go services by `wails3 generate bindings -b`
 
 ---
 
 ## Contributing
 
 Have an idea? Found a bug? Contributions are welcome and appreciated. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+Quick version:
+
+```bash
+git clone https://github.com/d3uceY/Cokpyt.git
+cd Cokpyt
+wails3 dev
+```
+
+```bash
+go test ./...                     # Go tests
+node scripts/check-frontend.mjs   # parse every frontend module
+```
 
 ---
 
