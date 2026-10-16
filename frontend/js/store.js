@@ -59,7 +59,7 @@ export function activeLabel() {
 export function envName(env) {
   if (!env) return "";
   if (!env.version || env.label.includes(env.version)) return env.label;
-  return `${env.label} — ${env.version}`;
+  return `${env.label} (${env.version})`;
 }
 
 export async function bootstrap() {
@@ -158,7 +158,7 @@ export async function operate(python, label, work) {
   try {
     await work();
     invalidate(python);
-    toast(`${label} — done.`, "ok");
+    toast(`${label}. Done.`, "ok");
     return true;
   } catch (error) {
     invalidate(python);

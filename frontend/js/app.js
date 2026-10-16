@@ -37,7 +37,7 @@ async function boot() {
   try {
     await store.bootstrap();
   } catch (error) {
-    toast(`Could not read the Python environments: ${error.message}`, "danger");
+    toast(`Could not read environments: ${error.message}`, "danger");
   }
 
   store.applyTheme(store.state.theme, { persist: false });
@@ -79,7 +79,15 @@ function buildNav() {
       if (!route.path) return h("div", { class: "nav-label eyebrow", text: route.label });
       return h(
         "a",
-        { class: "nav-item", href: `#${route.path}`, dataset: { route: route.path } },
+        {
+          class: "nav-item",
+          href: `#${route.path}`,
+          dataset: { route: route.path },
+          /* The rail below 860px hides the label, so the name has to survive
+             somewhere: the title for the pointer, the aria-label for a reader. */
+          title: route.label,
+          "aria-label": route.label,
+        },
         icon(route.icon, 19),
         h("span", { text: route.label }),
         h("span", { class: "nav-count", hidden: true, dataset: { count: route.path } }),
@@ -102,9 +110,9 @@ function wireChrome() {
   $("console-copy").addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(output.text());
-      toast("Output copied.", "ok");
+      toast("Copied.", "ok");
     } catch {
-      toast("Could not reach the clipboard.", "danger");
+      toast("Clipboard unavailable.", "danger");
     }
   });
 
@@ -126,7 +134,7 @@ async function rescan() {
     invalidatePageCaches();
     await store.packageCounts();
     await renderPage();
-    toast(`Found ${store.state.envs.length} Python environments.`, "ok");
+    toast(`Found ${store.state.envs.length} environments.`, "ok");
   } catch (error) {
     toast(error.message, "danger");
   } finally {
@@ -157,7 +165,7 @@ function renderEnvPicker() {
     ),
   );
   if (options.length === 0) {
-    options.push(h("option", { value: "" }, "No environments found"));
+    options.push(h("option", { value: "" }, "None found"));
   }
   replace(select, options);
   select.disabled = store.state.envs.length === 0;
@@ -190,7 +198,7 @@ async function refreshStatusBar() {
   if (store.state.scanning && store.state.envs.length === 0) {
     replace(
       bar,
-      h("span", { class: "statusbar-item" }, h("span", { class: "spinner" }), "Scanning for Python environments"),
+      h("span", { class: "statusbar-item" }, h("span", { class: "spinner" }), "Scanning for environments"),
       h("span", { class: "statusbar-right", text: scanMessage }),
     );
     return;
@@ -211,7 +219,7 @@ async function refreshStatusBar() {
       if (info.pipVersion) parts.push(h("span", { class: "statusbar-item", text: `pip ${info.pipVersion}` }));
       else parts.push(h("span", { class: "statusbar-item", text: "no pip" }));
     } catch {
-      parts.push(h("span", { class: "statusbar-item", text: "the active environment will not run" }));
+      parts.push(h("span", { class: "statusbar-item", text: "environment will not run" }));
     }
   }
 
@@ -269,7 +277,7 @@ async function renderPage() {
       store.state.scanning
         ? scanningBlock(scanMessage)
         : errorNote(
-            "No Python environment was found on this machine. Install Python, or use “Scan a folder” on the Environments page to point Cokpyt at a project that has a venv.",
+            "No Python environment found. Install Python, or use “Scan a folder” on Environments to point Cokpyt at a project that has a venv.",
           ),
     );
     return;
@@ -360,7 +368,7 @@ function wireEvents() {
       await renderPage();
       refreshStatusBar();
       if (store.state.envs.length === 0) {
-        toast("No Python environment was found on this machine.", "warn");
+        toast("No Python environment found.", "warn");
       }
     } catch (error) {
       toast(error.message, "danger");

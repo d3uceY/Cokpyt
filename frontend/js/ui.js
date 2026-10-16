@@ -81,11 +81,11 @@ export function scanningBlock(message = "") {
     "div",
     { class: "empty" },
     h("span", { class: "spinner", style: "width:18px;height:18px" }),
-    h("span", { class: "empty-title", text: "Looking for Python environments" }),
+    h("span", { class: "empty-title", text: "Looking for environments" }),
     h(
       "span",
       { class: "empty-sub" },
-      "Reading the py launcher, the usual install directories, and every pyvenv.cfg and conda-meta marker under your home folder.",
+      "py launcher, install directories, and pyvenv.cfg / conda-meta markers under your home folder.",
     ),
     message ? h("span", { class: "empty-sub mono" }, message) : null,
   );
@@ -121,8 +121,28 @@ export function statBlock({ label, value, note: noteText, tone = "muted", icon: 
 
 /* table builds the shape every list in the app uses: uppercase micro headers
    over 1px-ruled rows. A head entry is either a label or an attribute object
-   for the cell (used to mark the right-aligned action column). */
+   for the cell (used to mark the right-aligned action column).
+
+   Below a narrow window the rows fold into cards, and a cell that no longer has
+   a header beside it needs its own label. The header is the only place that
+   label exists, so it is copied onto each cell here rather than in every
+   caller; the first cell becomes the card's heading instead. */
 export function table(head, rows) {
+  const labels = head.map((column) => (typeof column === "string" ? column : column.text || ""));
+
+  for (const row of rows.flat(Infinity)) {
+    if (!(row instanceof Element) || row.tagName !== "TR") continue;
+    [...row.children].forEach((cell, index) => {
+      if (cell.tagName !== "TD") return;
+      if (index === 0) {
+        cell.classList.add("cell-title");
+        return;
+      }
+      if (cell.classList.contains("cell-right") || !labels[index]) return;
+      cell.dataset.label = labels[index];
+    });
+  }
+
   return h(
     "div",
     { class: "table-wrap" },
@@ -335,20 +355,30 @@ export function promptDialog({ title, label, placeholder = "", confirm = "Instal
 /* chooseDialog asks for one item out of a list that has to be fetched first.
 
    The fetch starts when the dialog opens rather than before it, so a slow
-   lookup shows as a spinner in a dialog that is already on screen instead of as
-   a row button that looks like it was ignored. `load` resolves to
-   [{ value, label, selected }]. */
+   lookup shows as a note inside a dialog that is already on screen instead of
+   as a row button that looks like it was ignored. `load` resolves to
+   [{ value, label, selected, badge }], where `selected` marks the option to
+   open on and `badge` is an optional short marker for it.
+
+   The list is built from buttons rather than a native multi-row <select>. A
+   native one paints the OS's own listbox, which ignores the theme, cannot show
+   which row is the one already installed, and sits in the dialog like a widget
+   someone dropped in. */
 export function chooseDialog({ title, label, load, confirm = "OK" }) {
   return new Promise((resolve) => {
-    const list = h("select", { class: "select", size: 12, "aria-label": label || title });
+    const options = [];
+    let active = 0;
+
+    const list = h("div", {
+      class: "dialog-list",
+      role: "listbox",
+      tabindex: "0",
+      "aria-label": label || title,
+    });
     list.hidden = true;
 
-    const note = h("p", { class: "dialog-text", text: "Looking this up…" });
-    const submit = h(
-      "button",
-      { class: "btn btn-primary", type: "button", disabled: true },
-      confirm,
-    );
+    const note = h("p", { class: "dialog-foot", text: "Looking this up…" });
+    const submit = h("button", { class: "btn btn-primary", type: "button", disabled: true }, confirm);
 
     const finish = (value) => {
       backdrop.remove();
@@ -357,8 +387,41 @@ export function chooseDialog({ title, label, load, confirm = "OK" }) {
     };
     const onKey = (event) => {
       if (event.key === "Escape") finish(null);
-      if (event.key === "Enter" && !submit.disabled) finish(list.value);
     };
+
+    /* The chosen row is marked and named as the listbox's active descendant, so
+       focus stays on the list and the arrows never have to chase it. */
+    const mark = (index) => {
+      if (index < 0 || index >= options.length) return;
+      active = index;
+      const rows = list.children;
+      for (let i = 0; i < rows.length; i += 1) {
+        rows[i].setAttribute("aria-selected", String(i === index));
+      }
+      list.setAttribute("aria-activedescendant", rows[index].id);
+      rows[index].scrollIntoView({ block: "nearest" });
+      submit.disabled = false;
+    };
+
+    list.addEventListener("click", (event) => {
+      const row = event.target.closest(".dialog-option");
+      if (!row) return;
+      mark([...list.children].indexOf(row));
+      list.focus();
+    });
+
+    list.addEventListener("keydown", (event) => {
+      const last = options.length - 1;
+      if (event.key === "ArrowDown") mark(Math.min(active + 1, last));
+      else if (event.key === "ArrowUp") mark(Math.max(active - 1, 0));
+      else if (event.key === "Home") mark(0);
+      else if (event.key === "End") mark(last);
+      else if (event.key === "Enter" && !submit.disabled) finish(options[active].value);
+      else return;
+      event.preventDefault();
+    });
+
+    submit.addEventListener("click", () => finish(options[active].value));
 
     const backdrop = h(
       "div",
@@ -382,30 +445,44 @@ export function chooseDialog({ title, label, load, confirm = "OK" }) {
         ),
       ),
     );
-    submit.addEventListener("click", () => finish(list.value));
 
     document.addEventListener("keydown", onKey);
     document.body.append(backdrop);
 
     load()
-      .then((options) => {
-        if (options.length === 0) {
+      .then((loaded) => {
+        if (loaded.length === 0) {
           note.textContent = "Nothing to choose from.";
           return;
         }
+
+        options.push(...loaded);
         replace(
           list,
-          options.map((option) =>
-            h("option", { value: option.value, selected: option.selected }, option.label),
+          loaded.map((option, index) =>
+            h(
+              "button",
+              {
+                class: "dialog-option",
+                type: "button",
+                role: "option",
+                id: `cokpyt-choice-${index}`,
+                "aria-selected": "false",
+              },
+              h("span", { class: "dialog-option-mark" }, icon("check", 13)),
+              h("span", { class: "dialog-option-name", text: option.label }),
+              option.badge ? h("span", { class: "badge", text: option.badge }) : null,
+            ),
           ),
         );
-        /* The list exists now, so the dialog stops being a status message. The
-           chosen option is whichever the caller marked, falling back to the
-           first, which for a newest-first list is the latest version. */
+
         list.hidden = false;
-        if (!list.value) list.selectedIndex = 0;
-        note.textContent = `${options.length} to choose from.`;
-        submit.disabled = false;
+        note.textContent = `${loaded.length} to choose from.`;
+
+        /* Opening on the version already installed is usually the fastest way
+           to find the one wanted; the first entry is the fallback. */
+        const chosen = loaded.findIndex((option) => option.selected);
+        mark(chosen === -1 ? 0 : chosen);
         list.focus();
       })
       .catch((error) => {
