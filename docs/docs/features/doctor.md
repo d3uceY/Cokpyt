@@ -4,15 +4,9 @@ sidebar_position: 5
 
 # Doctor
 
-The **Doctor** page runs a suite of automated diagnostics against your Python environment and tells you exactly what is healthy, what needs attention, and how to fix it.
+Three checks against the active environment, each with a plain answer.
 
 ![Doctor page](/img/doctor.png)
-
----
-
-## Running the Checks
-
-Navigate to **Doctor** and click **Re-run checks**. Cokpyt will execute each diagnostic in sequence and display a status badge next to every check.
 
 ---
 
@@ -20,47 +14,34 @@ Navigate to **Doctor** and click **Re-run checks**. Cokpyt will execute each dia
 
 | Check | What it verifies |
 |---|---|
-| **Python reachable** | `python` (or `python3`) is on the system `$PATH` and returns a version string |
-| **pip installed** | `pip` is importable and returns a version |
-| **pip up to date** | Your pip version is current; warns if a newer version is available |
-| **PyPI connectivity** | The machine can reach `https://pypi.org` - catches firewall or proxy issues |
-| **Virtual environment** | Whether a `venv` / `virtualenv` is currently active (informational) |
+| **Interpreter** | The interpreter runs, and reports its version |
+| **pip** | `python -m pip` works in this environment, and which version it is |
+| **PyPI** | `https://pypi.org` is reachable - catches firewall and proxy problems |
 
 ---
 
-## Status Levels
-
-Each check resolves to one of three states:
+## Results
 
 | Badge | Meaning |
 |---|---|
-| ✅ **Passed** | Everything is in order |
-| ⚠️ **Warning** | The check found something worth noting but it won't stop pip from working |
-| ❌ **Failed** | Something is broken and pip operations are likely to fail |
+| **passed** | In order. |
+| **warn** | Worth noting; pip still works. |
+| **fail** | Broken; pip operations will likely fail. |
 
----
-
-## Fix Hints
-
-Any **Warning** or **Failed** check includes:
-
-1. **Plain-English explanation** - what exactly went wrong
-2. **Concrete suggestion** - the specific command or setting change that should resolve it
-
-For example, if pip is outdated the hint might read:
-
-> Run `python -m pip install --upgrade pip` to update to the latest version.
+A warn or fail check adds a hint - what went wrong, and the command or setting that fixes it. Where
+there is a documentation page for the fix, **Fix** opens it.
 
 ---
 
 ## When to Use Doctor
 
-- **First run** - after installing Cokpyt, run Doctor to confirm the environment is set up correctly.
-- **After switching environments** - if you activate a different `venv`, run Doctor to verify the new environment is healthy.
-- **Debugging** - if an install or search fails unexpectedly, Doctor's PyPI connectivity check quickly rules out network issues.
+- **First run** - confirm the environment is set up correctly.
+- **After switching environments** - verify the new one is healthy.
+- **Debugging** - an install or search that fails unexpectedly. The PyPI check rules out the network.
 
 ---
 
 ## Manual Verification
 
-The Doctor page is read-only - it only runs diagnostics. It never modifies your environment. If a check suggests running a command (e.g. upgrading pip), execute that command in a terminal and then click **Re-run checks** to confirm the fix worked.
+Doctor is read-only; it never modifies the environment. If a check suggests a command, run it in a
+terminal and re-check.
