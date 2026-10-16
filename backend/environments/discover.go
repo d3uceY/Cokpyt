@@ -125,7 +125,7 @@ func (d *discoverer) fromLauncher() {
 	if runtime.GOOS != "windows" {
 		return
 	}
-	d.progress("Asking the py launcher for its runtimes")
+	d.progress("Asking the py launcher")
 	out, err := run(5*time.Second, "py", "-0p")
 	if err != nil {
 		return
@@ -195,7 +195,7 @@ func (d *discoverer) fromInstallLocations() {
 				Kind:   KindStandalone,
 				Label:  name,
 				Root:   filepath.Dir(match),
-				Source: "found in a Python install directory (not tracked by py)",
+				Source: "install directory (not tracked by py)",
 			})
 		}
 	}
@@ -423,7 +423,7 @@ func (d *discoverer) noteStoreStub() {
 		return
 	}
 	if strings.Contains(strings.ToLower(resolved), `microsoft\windowsapps`) {
-		d.notes = append(d.notes, "`python` on PATH is the Microsoft Store stub, not a real interpreter. Cokpyt uses the environments listed above instead.")
+		d.notes = append(d.notes, "`python` on PATH is the Microsoft Store stub, not a real interpreter. Cokpyt used the environments above instead.")
 	}
 }
 
