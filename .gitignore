@@ -1,4 +1,20 @@
-build/bin
-node_modules
-frontend/dist
-references
+# Build output
+bin/
+build/bin/
+*.syso
+
+# go-task's checksum cache, written by `wails3 task`
+.task/
+
+# Generated from the Go services by `wails3 generate bindings -b`.
+# `wails3 build` and `wails3 task compile` regenerate it before compiling.
+frontend/bindings/
+
+# Reference material: cloned repositories and notes, not part of the app.
+references/
+
+# Scratch space for screenshots taken while verifying the UI.
+tmp/
+
+# Built wheels and sdists for the pip-installable launcher under Cokpyt-pip.
+Cokpyt-pip/dist/
