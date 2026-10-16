@@ -4,51 +4,43 @@ sidebar_position: 6
 
 # History
 
-The **History** page is a permanent, searchable audit trail of every install, upgrade, and uninstall action that Cokpyt has ever performed. It persists across app restarts so you always know what changed in your environment and when.
+Every install, upgrade and uninstall Cokpyt has run, newest first. It persists across restarts.
 
 ![History page](/img/history.png)
 
 ---
 
-## History Table
-
-Each row in the history table represents a single pip operation and shows:
+## The Table
 
 | Column | Description |
 |---|---|
-| **Package** | Name of the package that was acted on |
-| **Version** | The version targeted by the action |
-| **Action** | `Install`, `Upgrade`, or `Uninstall` |
-| **Status** | `success` (green) or `failed` (red) |
-| **Timestamp** | Date and time the action was run |
+| **Package** | Package acted on |
+| **Version** | Version the action targeted |
+| **Action** | `install`, `upgrade`, or `uninstall` |
+| **Result** | `success` or `failed` |
+| **When** | Relative time; hover for the exact timestamp |
 
-### Expanding a Row
-
-Click any row to expand it and see the **full pip command** that was executed. This is useful for reproducing an action manually or for debugging a failed operation.
+Hovering a row also shows the pip command that was run, for reproducing it by hand.
 
 ---
 
-## Filtering by Action Type
+## Filtering
 
-Use the tab bar at the top of the page to filter the list:
-
-- **All** - shows every entry
-- **Install** - shows only install actions
-- **Upgrade** - shows only upgrade actions
-- **Uninstall** - shows only uninstall actions
+The tabs at the top filter by action: **All**, **install**, **upgrade**, or **uninstall**. Each shows
+its own count.
 
 ---
 
 ## Exporting to CSV
 
-Click the **Export CSV** button in the page header to download the entire history log as a `.csv` file. The export includes all columns: package name, version, action, status, and timestamp. Useful for sharing with a team, keeping personal change notes, or importing into a spreadsheet.
+**Export CSV** downloads the currently filtered rows, with every column including the command.
 
 ---
 
 ## Clearing the History
 
-Click **Clear All** in the page header to wipe the history log. Because this is irreversible, Cokpyt requires a **two-step confirmation** - a dialog will appear asking you to confirm before any data is deleted.
+**Clear** wipes the log after a confirmation. It cannot be undone; export first if you want a copy.
 
 :::caution
-Clearing history is permanent. Export to CSV first if you want to keep a copy.
+Only actions run from Cokpyt are listed. Anything you did in a terminal lives only in that terminal.
 :::

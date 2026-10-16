@@ -4,7 +4,7 @@ sidebar_position: 9
 
 # Settings
 
-The **Settings** page lets you configure Cokpyt's appearance and replay the guided tour whenever you want.
+Appearance, updates, the active environment, and where Cokpyt keeps its files.
 
 ![Settings page](/img/settings.png)
 
@@ -12,34 +12,31 @@ The **Settings** page lets you configure Cokpyt's appearance and replay the guid
 
 ## Appearance
 
-### Theme
-
-Toggle between **Light** and **Dark** mode using the two theme buttons. Your selection is saved and applied immediately - no restart needed.
-
-Cokpyt also respects your operating system's preferred color scheme on first launch. You can override it here at any time.
+**Light** or **Dark**. The choice is remembered between runs and applied before the window paints.
 
 ---
 
-## Guided Tour
+## About
 
-### What the Tour Does
+Shows the Cokpyt version and platform. **Check for updates** asks GitHub for the latest release and
+links to it when one is newer.
 
-The guided tour is a step-by-step walkthrough of Cokpyt's main features. It highlights each section of the sidebar in sequence and briefly explains what that page does. It runs entirely inside the app - no external browser needed.
+---
 
-### Running the Tour
+## Active Environment
 
-Click **Start Tour** on the Settings page. The tour will begin from the current screen and walk through:
+Interpreter path, environment root, kind, how it was found, and the Python, pip and site-packages
+locations. **Open folder** reveals the environment in your file manager.
 
-1. The sidebar navigation items
-2. The Dashboard stat cards
-3. The Installed Packages table and action buttons
-4. The Search input
-5. The Doctor diagnostics
-6. The History table
-7. The Cleanup targets
+---
 
-You can exit the tour at any point by pressing **Escape** or clicking outside the tour tooltip.
+## Stored Data
 
-### Re-running the Tour
+Cokpyt keeps a config file, a log, the operation history, and a copy of the PyPI name index. Nothing
+about your packages is copied anywhere.
 
-The tour can be replayed as many times as you like - it never locks or marks itself as "completed". Useful if you've just onboarded a new team member or returned to Cokpyt after a long break.
+- **Refetch the index** - downloads every PyPI project name again. It happens automatically the first
+  time you search.
+- **View the log** - opens the log in the console panel.
+- **Clear the log** - deletes the stored log lines. The operation history is separate.
+- **Show the intro again** - restores the first-run note on Overview.

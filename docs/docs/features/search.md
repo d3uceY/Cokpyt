@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Search
 
-The **Search** page lets you query the entire PyPI index in real time and install any result directly from the app - no separate browser tab or terminal window needed.
+Query the PyPI index and install a result without leaving the app.
 
 ![Search page](/img/search.png)
 
@@ -12,31 +12,18 @@ The **Search** page lets you query the entire PyPI index in real time and instal
 
 ## Searching PyPI
 
-Type any package name or keyword into the search box and press **Enter** (or wait for the auto-search to trigger). Cokpyt queries the PyPI Simple/JSON index and returns a list of matching packages.
+Type a name in the search box and press **Enter**. Matching runs against the PyPI name index, so
+results are the projects whose names contain what you typed.
 
-### Result Cards
-
-Each result shows:
-
-| Field | Description |
-|---|---|
-| **Name** | Package name as it appears on PyPI |
-| **Version** | Latest published version |
-| **Description** | Package summary from PyPI metadata |
-| **Install** button | One-click install |
+Each result shows the package name, its summary, the latest version, and an install button. A package
+already in the active environment is marked **installed**, and its button reads **Reinstall**.
 
 ---
 
 ## Installing a Search Result
 
-Click the **Install** button on any result card. Cokpyt runs `pip install <package>` and a live terminal panel slides in at the bottom of the screen to show the output. The button disables while the install is in progress to prevent duplicate runs.
+Click the button on a result. Cokpyt runs `pip install <package>`, streams the output to the console
+panel, and marks the row installed when it finishes.
 
-Once installed, the package appears on the [Installed Packages](./installed-packages) page.
-
----
-
-## Tips
-
-- **Exact name search** - searching for the full package name (e.g. `requests`) gives the most precise results.
-- **Keyword search** - broader terms (e.g. `http client`) return multiple packages, useful when you are evaluating alternatives.
-- **Version pinning** - installing from Search always installs the latest version. To install a specific version, use the **pip install** dialog on the [Installed Packages](./installed-packages) page and add a version specifier (e.g. `requests==2.28.0`).
+Search always installs the latest version. For a specific one, use [Installed
+Packages](./installed-packages) and pin it (`requests==2.32.0`).

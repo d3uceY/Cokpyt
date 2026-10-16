@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Installed Packages
 
-The **Installed Packages** page is the central hub for managing every package in your active Python environment. It shows a full, filterable table of everything pip knows about and lets you install, upgrade, uninstall, or bulk-remove packages without leaving the app.
+Every package in the active environment, with the buttons that change it.
 
 ![Installed Packages page](/img/installed_packages.png)
 
@@ -12,79 +12,78 @@ The **Installed Packages** page is the central hub for managing every package in
 
 ## The Package Table
 
-Each row in the table represents one installed package and shows:
-
 | Column | Description |
 |---|---|
-| **Package** | Package name (monospace) with the package summary shown as a smaller line beneath it |
-| **Version** | Currently installed version |
-| **Latest** | Newest version available on PyPI — highlighted green when an update is available |
-| **Source** | Always **PyPI** for pip-managed packages |
-| **Status** | **Up to date** (green) or **Outdated** (amber) based on whether a newer version exists |
+| **Package** | Name, with the package summary beneath it |
+| **Installed** | Currently installed version |
+| **Latest** | Newest version on PyPI, or **up to date** |
 | **Actions** | Per-row **Upgrade**, **Versions** and **Uninstall** buttons |
 
-The table is paginated for large environments and stays responsive even with hundreds of packages.
+A checkbox column on the left selects rows for a bulk uninstall.
 
 ---
 
 ## Filtering the List
 
-Type in the **search / filter box** at the top of the page to narrow the table down in real time. The filter matches against both package names and descriptions, so you can search by keyword even if you don't know the exact package name.
+The filter box at the top narrows the table as you type. It matches names and descriptions, so a
+keyword is enough when you don't know the exact name. The label beside it shows how many rows are
+shown out of how many exist.
 
 ---
 
 ## Installing a Package
 
-Click the blue **pip install** button in the page header to open the install dialog.
+Click **Install** in the page header.
 
-1. Type the package name. You can optionally pin a version using pip's standard syntax:
-   - `requests` - installs the latest version
-   - `requests==2.32.0` - installs exactly version 2.32.0
-   - `requests>=2.28,<3` - installs the latest version satisfying the constraint
+1. Type a requirement. pip's syntax applies:
+   - `requests` - the latest version
+   - `requests==2.32.0` - exactly that version
+   - `requests>=2.28,<3` - the latest matching the constraint
 2. Press **Enter** or click **Install**.
 
-A live terminal panel slides in at the bottom of the screen and streams the pip output in real time. The table refreshes automatically once the installation finishes.
+The console panel opens at the bottom of the window and streams pip's output. The table refreshes
+when the install finishes.
 
 ---
 
 ## Upgrading a Package
 
-Click the **Upgrade** button on any row to run `pip install --upgrade <package>` for that package. The live terminal panel shows the output; the table refreshes when done.
-
-To upgrade every outdated package at once, use the **Update All** button on either this page or the [Dashboard](./dashboard).
+**Upgrade** on a row runs `pip install --upgrade <package>`. To upgrade everything at once, use the
+[Updates](./updates) page.
 
 ---
 
 ## Choosing a Specific Version
 
-Click **Versions** on any row to pick any version pip can install, not just the latest. Upgrading and downgrading are the same button, so a version you pinned for a reason is reachable again without leaving the app.
+**Versions** on a row lists every version pip could install into this environment, newest first. The
+installed version is marked and preselected, so the dialog opens where you already are.
 
-The list is fetched when you press the button, not when the page loads, because it is a network lookup per package. The version you have installed is marked, and the dialog opens on it — scroll up for newer versions, down for older ones. Versions are listed newest first, in pip's own order.
+The list is fetched when you press the button, not when the page loads, because it is a network
+lookup per package. Prereleases, yanked releases, and releases with no build for your platform are
+already filtered out, so every version offered will install. Picking the installed version does
+nothing.
 
-Only versions pip could actually install into that environment are offered. Prereleases, yanked releases and releases with no build for your platform are already filtered out, so every version in the list is one that will install. Picking the version that is already installed does nothing.
-
-The install runs as `pip install <package>==<version>`, which makes pip replace whatever is there. The live terminal panel shows the output, and the table refreshes when it finishes. The result is recorded in [History](./history) under the package's own name rather than the pinned requirement.
+The install runs as `pip install <package>==<version>`, and the result is recorded in
+[History](./history) under the package's own name rather than the pinned requirement.
 
 ---
 
 ## Uninstalling a Package
 
-Click **Uninstall** on any row. A confirmation dialog asks you to confirm before anything is deleted. The live terminal panel shows the pip output and the table refreshes once uninstallation is complete.
+**Uninstall** on a row asks for confirmation first, then runs pip. The table refreshes when it
+finishes.
 
 ---
 
 ## Bulk Uninstall
 
-To remove multiple packages in one operation:
-
-1. Check the **checkbox** next to each package you want to remove.
-2. Click the **Bulk Uninstall** button that appears in the header once at least one package is selected.
-3. Confirm the dialog - it lists every package that will be removed.
-
-Cokpyt runs `pip uninstall -y` on all selected packages and refreshes the table when finished.
+Tick the checkboxes on the rows you want gone. A button appears in the toolbar; click it and confirm.
+Cokpyt runs `pip uninstall -y` on the selected packages and refreshes the table when it finishes.
 
 ---
 
-## Live Terminal Panel
+## Console Panel
 
-Every install, upgrade, or uninstall operation streams raw pip output into a **terminal panel** that slides up from the bottom of the screen. The panel stays open so you can verify what happened. Dismiss it by clicking the **�-** button in the panel header.
+Every install, upgrade, or uninstall streams pip's raw output into the console panel, which stays
+open so you can read what happened. **copy** takes the transcript; **clear** empties it; the × hides
+the panel.
