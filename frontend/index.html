@@ -1,14 +1,88 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" data-theme="light">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Cokpyt</title>
-
+    <link rel="icon" href="/assets/logo-light.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <script>
+      // Applied before first paint so the window never flashes the wrong
+      // theme. The real value lives in the Go config; this is only a cache.
+      const cached = localStorage.getItem("cokpyt.theme");
+      if (cached === "dark" || cached === "light") {
+        document.documentElement.dataset.theme = cached;
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-logo" src="/assets/logo-light.png" alt="" data-logo="light" />
+        <img class="brand-logo" src="/assets/logo-dark.png" alt="" data-logo="dark" />
+        <div class="brand-text">
+          <span class="brand-name">Cokpyt</span>
+          <span class="brand-sub">pip manager</span>
+        </div>
+      </div>
+
+      <div class="env-picker">
+        <span class="eyebrow">Environment</span>
+        <select id="env-select" class="select" aria-label="Active Python environment"></select>
+        <button type="button" class="btn btn-ghost btn-sm" id="env-rescan">
+          <span data-icon="refresh" data-size="14"></span>
+          <span id="env-rescan-label">Rescan</span>
+        </button>
+      </div>
+
+      <nav class="nav" id="nav" aria-label="Sections"></nav>
+
+      <div class="sidebar-foot">
+        <span class="status-dot" id="env-health" title="Active environment state"></span>
+        <span class="eyebrow" id="version-label">v0.3.0</span>
+        <button
+          type="button"
+          class="icon-btn"
+          id="theme-toggle"
+          aria-label="Switch theme"
+          title="Switch theme"
+        >
+          <span data-icon="dark_mode" data-size="16"></span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-head">
+        <div class="page-head-text">
+          <p class="eyebrow" id="page-eyebrow"></p>
+          <h1 class="page-title" id="page-title"></h1>
+          <p class="page-sub" id="page-sub"></p>
+        </div>
+        <div class="page-actions" id="page-actions"></div>
+      </header>
+
+      <div class="view" id="view" tabindex="-1"></div>
+
+      <section class="console" id="console" hidden aria-label="Command output">
+        <div class="console-head">
+          <span class="eyebrow">Output</span>
+          <span class="console-progress" id="console-progress"></span>
+          <span class="console-head-spacer"></span>
+          <button type="button" class="link-btn" id="console-copy">copy</button>
+          <button type="button" class="link-btn" id="console-clear">clear</button>
+          <button type="button" class="icon-btn icon-btn-invert" id="console-close" aria-label="Hide output">
+            <span data-icon="close" data-size="16"></span>
+          </button>
+        </div>
+        <pre class="console-body" id="console-body"></pre>
+      </section>
+
+      <footer class="statusbar" id="statusbar"></footer>
+    </main>
+
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/js/app.js"></script>
   </body>
 </html>
