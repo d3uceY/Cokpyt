@@ -1,6 +1,6 @@
 # Contributing to Cokpyt
 
-Thanks for taking the time. Every bug report, feature idea, and pull request makes Cokpyt better for everyone in the pip ecosystem. Here is everything you need to know to get involved.
+Bug reports, feature ideas, documentation fixes and pull requests are all welcome.
 
 ---
 
@@ -24,24 +24,24 @@ Be respectful. Everyone contributing here is doing so voluntarily. Constructive 
 
 ## Reporting Bugs
 
-Before opening an issue, check whether it has already been reported on the [Issues page](https://github.com/d3uceY/Cokpyt/issues).
+Check the [Issues page](https://github.com/d3uceY/Cokpyt/issues) first.
 
-When filing a new bug report, include:
+A useful report includes:
 
-1. Your operating system and version
-2. Your Python version (`python --version`)
-3. Your pip version (`pip --version`)
-4. The Cokpyt version (shown in Settings)
-5. Exact steps to reproduce the problem
-6. What you expected to happen
-7. What actually happened
-8. Any relevant output from Cokpyt's console panel — hit **copy** in its header, or open **Settings → View the log**
+1. OS and version
+2. Python version (`python --version`)
+3. pip version (`pip --version`)
+4. Cokpyt version (shown in Settings)
+5. Steps to reproduce
+6. What you expected, and what happened
+7. Console output — hit **copy** in the console header, or open **Settings → View the log**
 
 ---
 
 ## Suggesting Features
 
-Open an issue and prefix the title with `[Feature]`. Describe the problem you are trying to solve and how your proposed feature would address it. Screenshots, mockups, or references to how other tools handle it are always helpful.
+Open an issue with a `[Feature]` prefix. Describe the problem you are trying to solve, and how the
+feature would address it. Screenshots and references to how other tools do it help.
 
 ---
 
@@ -142,11 +142,10 @@ bindings. Run `wails3 task bindings`, or just `wails3 task compile`, after chang
    node scripts/check-frontend.mjs
    go test ./...
    ```
-4. Commit with a clear message describing what changed and why.
-5. Push your branch and open a pull request against `main`.
-6. Fill out the PR description -- link to any related issues and explain what the change does.
+4. Commit with a message describing what changed and why.
+5. Push your branch and open a pull request against `main`, linking related issues.
 
-Keep pull requests focused. One fix or feature per PR is much easier to review than a large multi-purpose change.
+Keep pull requests focused. One fix or feature per PR.
 
 ---
 
@@ -183,4 +182,4 @@ Keep pull requests focused. One fix or feature per PR is much easier to review t
 
 ## Questions?
 
-Open an issue or start a discussion on the [GitHub repo](https://github.com/d3uceY/Cokpyt). Happy to help.
+Open an issue or a discussion on the [GitHub repo](https://github.com/d3uceY/Cokpyt).
