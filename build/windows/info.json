@@ -1,15 +1,15 @@
 {
 	"fixed": {
-		"file_version": "{{.Info.ProductVersion}}"
+		"file_version": "0.3.0"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "{{.Info.ProductVersion}}",
-			"CompanyName": "{{.Info.CompanyName}}",
-			"FileDescription": "{{.Info.ProductName}}",
-			"LegalCopyright": "{{.Info.Copyright}}",
-			"ProductName": "{{.Info.ProductName}}",
-			"Comments": "{{.Info.Comments}}"
+			"ProductVersion": "0.3.0",
+			"CompanyName": "d3uceY",
+			"FileDescription": "A desktop GUI for pip",
+			"LegalCopyright": "Copyright © 2026 d3uceY",
+			"ProductName": "Cokpyt",
+			"Comments": "Built using Wails (https://wails.io)"
 		}
 	}
 }
