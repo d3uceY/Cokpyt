@@ -12,7 +12,7 @@ const DEBOUNCE_MS = 300;
 export const meta = {
   eyebrow: "PyPI",
   title: "Search PyPI",
-  subtitle: "Find a package and install it straight into the active environment.",
+  subtitle: "Find and install into the active environment.",
 };
 
 let query = "";
@@ -77,7 +77,7 @@ export async function render(ctx) {
     if (!query.trim()) {
       replace(
         body,
-        empty("Search the Python Package Index", "Type a name above. The index holds every published project.", "search"),
+        empty("Type a package name", "The index holds every published project.", "search"),
       );
       return;
     }
@@ -117,7 +117,7 @@ export async function render(ctx) {
                 {},
                 h(
                   "td",
-                  { class: "cell-flex" },
+                  { class: "cell-flex cell-title" },
                   h(
                     "div",
                     { class: "cell-main" },
@@ -132,14 +132,14 @@ export async function render(ctx) {
                     ),
                   ),
                 ),
-                h("td", { class: "mono cell-num", text: result.version }),
+                h("td", { class: "mono cell-num", dataset: { label: "Latest" }, text: result.version }),
                 h("td", { class: "cell-short" }, installed ? h("span", { class: "badge" }, "installed") : null),
                 actionCell(
                   result.homePage
                     ? h(
                         "button",
                         {
-                          class: "btn btn-sm",
+                          class: "btn btn-sm btn-ghost",
                           type: "button",
                           title: result.homePage,
                           onclick: () => api.openURL(result.homePage).catch((error) => toast(error.message, "danger")),
@@ -150,7 +150,7 @@ export async function render(ctx) {
                   h(
                     "button",
                     {
-                      class: "btn btn-sm btn-primary",
+                      class: "btn btn-sm btn-ghost btn-primary",
                       type: "button",
                       onclick: async () => {
                         const ok = await store.operate(ctx.env.python, `Installing ${result.name}`, () =>
@@ -162,6 +162,7 @@ export async function render(ctx) {
                         }
                       },
                     },
+                    icon(installed ? "refresh" : "download", 13),
                     installed ? "Reinstall" : "Install",
                   ),
                 ),

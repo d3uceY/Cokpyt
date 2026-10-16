@@ -13,7 +13,6 @@ export const meta = {
   title: "History",
   subtitle: "Installs, upgrades and uninstalls run from Cokpyt, newest first.",
 };
-
 const FILTERS = ["all", "install", "upgrade", "uninstall"];
 let filter = "all";
 
@@ -89,7 +88,7 @@ export async function render(ctx) {
       body,
       empty(
         entries.length === 0 ? "Nothing recorded yet" : `No ${filter} entries`,
-        "Operations started from Cokpyt are recorded here as they finish.",
+        "Operations run from Cokpyt are recorded here as they finish.",
         "history",
       ),
     );
@@ -97,7 +96,7 @@ export async function render(ctx) {
       "div",
       { class: "stack" },
       panel("Activity", body, { actions }),
-      note("Only actions run from this app are listed. Anything you did in a terminal lives only in that terminal.", "info"),
+      note("Only actions run from Cokpyt are listed. Terminal commands are not recorded.", "info"),
     );
   }
 

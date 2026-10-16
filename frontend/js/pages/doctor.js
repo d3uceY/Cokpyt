@@ -15,7 +15,7 @@ export const meta = {
 
 export async function render(ctx) {
   const body = h("div", {}, loading("Running checks…"));
-  meta.subtitle = `Interpreter, pip and the network pip needs, for ${store.envName(ctx.env)}.`;
+  meta.subtitle = `Interpreter, pip and PyPI, for ${store.envName(ctx.env)}.`;
 
   let report;
   try {

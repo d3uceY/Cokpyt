@@ -11,8 +11,7 @@ import { actionCell, empty, h, icon, note, panel, scanningBlock, shortPath, tabl
 export const meta = {
   eyebrow: "Machine",
   title: "Environments",
-  subtitle:
-    "Every Python environment Cokpyt could find.",
+  subtitle: "Every Python environment found.",
 };
 
 export let needsEnvironment = false;
@@ -25,10 +24,10 @@ const KIND_LABEL = {
 };
 
 const KIND_HINT = {
-  launcher: "Installed and tracked by the Python Install Manager. `py -0p` lists these.",
-  standalone: "Found by scanning the usual install locations. `py --list` does not know about this one.",
-  venv: "A virtual environment. Its packages are in no other list anywhere on this machine.",
-  conda: "A conda environment. It carries conda-meta, not pyvenv.cfg, so it has to be found separately.",
+  launcher: "Tracked by the Python Install Manager. `py -0p` lists these.",
+  standalone: "Found in an install directory. `py` does not know about it.",
+  venv: "Virtual environment. Its packages appear in no other list.",
+  conda: "Conda environment. Marked by conda-meta, not pyvenv.cfg.",
 };
 
 export function actions(ctx) {
@@ -146,11 +145,12 @@ export function environmentsTable(ctx, counts, { expand = false } = {}) {
         h(
           "button",
           {
-            class: "btn btn-sm",
+            class: "btn btn-sm btn-ghost",
             type: "button",
-            title: "Show the environment folder",
+            title: "Open the environment folder",
             onclick: () => api.revealPath(env.root).catch((error) => toast(error.message, "danger")),
           },
+          icon("folder_open", 13),
           "Open",
         ),
         isActive
@@ -158,10 +158,11 @@ export function environmentsTable(ctx, counts, { expand = false } = {}) {
           : h(
               "button",
               {
-                class: "btn btn-sm btn-primary",
+                class: "btn btn-sm btn-ghost btn-primary",
                 type: "button",
                 onclick: () => ctx.select(env.python),
               },
+              icon("check", 13),
               "Use",
             ),
       ),

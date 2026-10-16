@@ -32,7 +32,7 @@ export function actions(ctx) {
 async function install(ctx) {
   const spec = await promptDialog({
     title: "Install a package",
-    label: "A name, a pinned version, a path or a URL. pip decides what counts as valid.",
+    label: "Name, pinned version, path, or URL.",
     placeholder: "requests==2.32.0",
   });
   if (!spec) return;
@@ -45,7 +45,7 @@ async function install(ctx) {
 
 export async function render(ctx) {
   const python = ctx.env.python;
-  meta.subtitle = `Everything installed in ${store.envName(ctx.env)}.`;
+  meta.subtitle = `Installed in ${store.envName(ctx.env)}.`;
 
   const packages = await store.packages(python);
 
@@ -55,20 +55,40 @@ export async function render(ctx) {
 
   /* ── toolbar ────────────────────────────────────────────────────────────── */
 
+  function selectAllRows(checked) {
+    for (const row of tbody.children) {
+      const box = row.querySelector(".checkbox");
+      box.checked = checked;
+      if (checked) selection.add(box.dataset.package);
+      else selection.delete(box.dataset.package);
+    }
+    paintSelection();
+  }
+
   const selectAll = h("input", {
     class: "checkbox",
     type: "checkbox",
     "aria-label": "Select every visible package",
-    onchange: (event) => {
-      for (const row of tbody.children) {
-        const box = row.querySelector(".checkbox");
-        box.checked = event.target.checked;
-        if (event.target.checked) selection.add(box.dataset.package);
-        else selection.delete(box.dataset.package);
-      }
-      paintSelection();
-    },
+    onchange: (event) => selectAllRows(event.target.checked),
   });
+
+  /* The header row is gone once the table has folded into cards, and with it
+     the only way to select every row, so the same control is offered here for
+     that layout. */
+  const selectAllNarrow = h(
+    "label",
+    { class: "narrow-only eyebrow", title: "Select every visible package" },
+    h("input", {
+      class: "checkbox",
+      type: "checkbox",
+      "aria-label": "Select every visible package",
+      onchange: (event) => {
+        selectAll.checked = event.target.checked;
+        selectAllRows(event.target.checked);
+      },
+    }),
+    "All",
+  );
 
   const filter = h("input", {
     class: "input",
@@ -89,6 +109,7 @@ export async function render(ctx) {
   const toolbar = h(
     "div",
     { class: "panel-toolbar" },
+    selectAllNarrow,
     h(
       "div",
       { class: "field grow", style: "max-width:430px" },
@@ -125,7 +146,7 @@ export async function render(ctx) {
       h("td", { class: "cell-tight" }, checkbox),
       h(
         "td",
-        { class: "cell-flex" },
+        { class: "cell-flex cell-title" },
         h(
           "div",
           { class: "cell-main" },
@@ -140,35 +161,37 @@ export async function render(ctx) {
           ),
         ),
       ),
-      h("td", { class: "mono cell-num", text: pkg.version }),
-      h("td", { class: "cell-num" }, latest),
+      h("td", { class: "mono cell-num", dataset: { label: "Installed" }, text: pkg.version }),
+      h("td", { class: "cell-num", dataset: { label: "Latest" } }, latest),
       actionCell(
         h(
           "button",
           {
-            class: "btn btn-sm",
+            class: "btn btn-sm btn-ghost",
             type: "button",
             onclick: async () => {
               const ok = await store.operate(python, `Upgrading ${pkg.name}`, () => api.upgrade(python, pkg.name));
               if (ok) ctx.refresh();
             },
           },
+          icon("arrow_upward", 13),
           "Upgrade",
         ),
         h(
           "button",
           {
-            class: "btn btn-sm",
+            class: "btn btn-sm btn-ghost",
             type: "button",
             title: `Install a different version of ${pkg.name}`,
             onclick: () => chooseVersion(ctx, pkg),
           },
+          icon("history", 13),
           "Versions",
         ),
         h(
           "button",
           {
-            class: "btn btn-sm",
+            class: "btn btn-sm btn-ghost",
             type: "button",
             onclick: async () => {
               const yes = await confirmDialog({
@@ -184,6 +207,7 @@ export async function render(ctx) {
               if (ok) ctx.refresh();
             },
           },
+          icon("delete", 13),
           "Uninstall",
         ),
       ),
@@ -196,7 +220,7 @@ export async function render(ctx) {
     replace(tbody, matching.slice(0, RENDER_LIMIT));
     countLabel.textContent =
       matching.length > RENDER_LIMIT
-        ? `first ${RENDER_LIMIT} of ${matching.length} shown`
+        ? `first ${RENDER_LIMIT} of ${matching.length}`
         : `${matching.length} of ${packages.length}`;
     selectAll.checked = false;
     paintSelection();
@@ -237,7 +261,7 @@ export async function render(ctx) {
       })
       .catch(() => {
         for (const cell of latestCells.values()) cell.textContent = "unavailable";
-        toast("PyPI could not be reached, so the latest versions are unknown.", "warn");
+        toast("PyPI unreachable, so the latest versions are unknown.", "warn");
       });
   }
 
@@ -248,7 +272,7 @@ export async function render(ctx) {
       ? h(
           "div",
           { class: "empty" },
-          h("span", { class: "empty-title", text: "This environment has no packages" }),
+          h("span", { class: "empty-title", text: "No packages in this environment" }),
           h("span", { class: "empty-sub", text: "Use Install to add the first one." }),
         )
       : h(
@@ -286,15 +310,16 @@ export async function render(ctx) {
    already is — usually the fastest way to find the version they want. */
 async function chooseVersion(ctx, pkg) {
   const version = await chooseDialog({
-    title: `${pkg.name} - choose a version`,
-    label: `Versions pip can install into ${store.envName(ctx.env)}.`,
+    title: `Choose a version of ${pkg.name}`,
+    label: `Versions pip can install here.`,
     confirm: "Install",
     load: async () => {
       const versions = (await api.versions(ctx.env.python, pkg.name)) || [];
       return versions.map((value) => ({
         value,
-        label: value === pkg.version ? `${value} — installed` : value,
+        label: value,
         selected: value === pkg.version,
+        badge: value === pkg.version ? "installed" : null,
       }));
     },
   });

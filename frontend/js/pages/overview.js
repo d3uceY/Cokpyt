@@ -13,7 +13,7 @@ import { empty, h, icon, loading, note, panel, replace, scanningBlock, statBlock
 export const meta = {
   eyebrow: "Machine",
   title: "Overview",
-  subtitle: "What is installed, where it lives, and what changed recently.",
+  subtitle: "Environments, packages, and recent changes.",
 };
 
 export let needsEnvironment = false;
@@ -65,7 +65,7 @@ function stats(env) {
     statBlock({
       label: "Packages in total",
       value: String(store.totalPackages()),
-      note: "across every environment",
+      note: "across all environments",
       icon: "inventory_2",
       tone: "muted",
     }),
@@ -95,7 +95,7 @@ function stats(env) {
       .catch(() => {
         replace(outdatedSlot, "?");
         const parent = outdatedCard.querySelector(".stat-note");
-        if (parent) parent.textContent = "PyPI could not be reached";
+        if (parent) parent.textContent = "PyPI unreachable";
       });
   } else {
     outdatedSlot.textContent = "0";
@@ -114,7 +114,7 @@ function activity() {
           body,
           empty(
             "Nothing yet",
-            "Installs, upgrades and uninstalls run from Cokpyt are recorded here.",
+            "Installs, upgrades and uninstalls run from Cokpyt show up here.",
             "history",
           ),
         );
@@ -160,6 +160,10 @@ function activity() {
    paragraph that says the thing the app is for, and a dismiss button. */
 export async function intro() {
   if (await api.introSeen().catch(() => true)) return null;
+  const node = note(
+    "Cokpyt runs pip against any Python environment on this machine. Switch with the sidebar picker; every page follows.",
+    "info",
+  );
   const dismiss = h(
     "button",
     {

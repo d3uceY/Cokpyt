@@ -15,9 +15,9 @@ export function actions(ctx) {
 
 export async function render(ctx) {
   const python = ctx.env.python;
-  meta.subtitle = `Everything behind the newest release on PyPI for ${store.envName(ctx.env)}.`;
+  meta.subtitle = `Packages behind PyPI in ${store.envName(ctx.env)}.`;
 
-  const body = h("div", {}, loading("Asking PyPI what is newer…"));
+  const body = h("div", {}, loading("Asking PyPI…"));
   const list = await store.outdated(python, { force: false });
 
   if (list.length === 0) {
@@ -25,7 +25,7 @@ export async function render(ctx) {
       body,
       empty(
         "Everything is up to date",
-        `${ctx.env.label} has nothing behind PyPI. Run “Check again” if that seems unlikely.`,
+        `Nothing in ${ctx.env.label} is behind PyPI. Run “Check again” if that seems unlikely.`,
         "check",
       ),
     );
@@ -54,7 +54,7 @@ export async function render(ctx) {
           ? h(
               "button",
               {
-                class: "btn btn-sm",
+                class: "btn btn-sm btn-ghost",
                 type: "button",
                 title: item.changelogUrl,
                 onclick: () => api.openURL(item.changelogUrl).catch((error) => toast(error.message, "danger")),
@@ -65,13 +65,14 @@ export async function render(ctx) {
         h(
           "button",
           {
-            class: "btn btn-sm btn-primary",
+            class: "btn btn-sm btn-ghost btn-primary",
             type: "button",
             onclick: async () => {
               const ok = await store.operate(python, `Upgrading ${item.name}`, () => api.upgrade(python, item.name));
               if (ok) ctx.refresh();
             },
           },
+          icon("arrow_upward", 13),
           "Upgrade",
         ),
       ),
@@ -128,7 +129,7 @@ function updateAllButton(ctx, list) {
       onclick: async () => {
         const yes = await confirmDialog({
           title: `Upgrade ${list.length} package${list.length === 1 ? "" : "s"}?`,
-          text: `${ctx.env.label} will be updated one package at a time. A major version bump can break things.`,
+          text: `${ctx.env.label} is updated one package at a time. A major bump can break things.`,
           confirm: "Upgrade all",
         });
         if (!yes) return;

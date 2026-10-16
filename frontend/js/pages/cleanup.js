@@ -15,7 +15,7 @@ export const meta = {
 
 export async function render(ctx) {
   const python = ctx.env.python;
-  meta.subtitle = `Leftovers pip and Python leave behind in ${store.envName(ctx.env)}, and what removing them would free.`;
+  meta.subtitle = `Leftovers in ${store.envName(ctx.env)}.`;
   const body = h("div", {}, loading("Measuring…"));
   const selected = new Set();
 
@@ -42,7 +42,7 @@ export async function render(ctx) {
     const bytes = categories.filter((c) => selected.has(c.kind)).reduce((sum, c) => sum + c.size, 0);
     const yes = await confirmDialog({
       title: "Run cleanup?",
-      text: `${formatBytes(bytes)} will be freed from ${ctx.env.label}. Deleted caches are re-downloaded the next time they are needed.`,
+      text: `${formatBytes(bytes)} will be freed from ${ctx.env.label}. Deleted caches are re-downloaded when needed.`,
       confirm: "Clean up",
       danger: true,
     });
@@ -101,9 +101,9 @@ function explain(category) {
   const where = category.path ? ` in ${category.path}` : "";
   switch (category.kind) {
     case "cache":
-      return `${files}pip's shared download cache${where}. Shared by every environment.`;
+      return `${files}pip's shared download cache${where}.`;
     case "orphan":
-      return `${files}leftover build metadata${where}. Safe to delete once a package is installed.`;
+      return `${files}leftover build metadata${where}. Safe once a package is installed.`;
     default:
       return `${files}compiled bytecode${where}. Python rebuilds it on demand.`;
   }

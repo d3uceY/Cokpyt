@@ -48,7 +48,7 @@ function appearance() {
           ),
         ),
       ),
-      h("p", { class: "muted", style: "font-size:12px" }, "The theme is remembered and applied before the window paints."),
+      h("p", { class: "muted", style: "font-size:12px" }, "Remembered between runs."),
     ),
   );
 }
@@ -70,14 +70,14 @@ function about() {
               type: "button",
               onclick: () => api.openURL(info.releaseURL).catch((error) => toast(error.message, "danger")),
             },
-            "Open the release",
+            "Open release",
           ),
         );
       } else {
-        slot.textContent = `You are on the newest release (${store.state.version}).`;
+        slot.textContent = `Up to date (${store.state.version}).`;
       }
     } catch (error) {
-      slot.textContent = `Could not reach GitHub: ${error.message}`;
+      slot.textContent = `GitHub unreachable: ${error.message}`;
     }
   }
 
@@ -92,7 +92,7 @@ function about() {
         h("dt", {}, "Version"),
         h("dd", {}, store.state.version),
         h("dt", {}, "Platform"),
-        h("dd", {}, `${store.state.platform} · ${store.state.envs.length} environments discovered`),
+        h("dd", {}, `${store.state.platform} · ${store.state.envs.length} environments`),
       ),
       h("div", { class: "row" }, slot, h("span", { class: "grow" }), h("button", { class: "btn btn-sm", type: "button", onclick: check }, "Check for updates")),
     ),
@@ -108,7 +108,7 @@ function environment(env, info) {
     ["Interpreter", env.python],
     ["Environment", env.root],
     ["Kind", env.kind + (env.base ? ` · built from ${env.base}` : "")],
-    ["How it was found", env.source],
+    ["Found by", env.source],
   ];
   if (info) {
     rows.push(["Python", info.pythonVersion || "unknown"]);
@@ -133,7 +133,7 @@ function environment(env, info) {
           "button",
           { class: "btn btn-sm", type: "button", onclick: () => api.revealPath(env.root).catch((error) => toast(error.message, "danger")) },
           icon("folder_open", 13),
-          "Open the folder",
+          "Open folder",
         ),
       ),
     ),
@@ -149,7 +149,7 @@ function maintenance(ctx) {
       h(
         "p",
         { class: "muted", style: "font-size:12px" },
-        "Cokpyt keeps a config file, a log, a record of the operations it has run, and a copy of the PyPI name index. Nothing about your packages is copied anywhere.",
+        "A config file, a log, the operation history, and a copy of the PyPI name index. Nothing about your packages is copied anywhere.",
       ),
       indexRow(),
       h(
@@ -168,7 +168,7 @@ function maintenance(ctx) {
             onclick: async () => {
               const yes = await confirmDialog({
                 title: "Clear the log?",
-                text: "Only the stored log lines are deleted. The operation history is separate.",
+                text: "Log lines only. The operation history is separate.",
                 confirm: "Clear",
                 danger: true,
               });
@@ -191,7 +191,7 @@ function maintenance(ctx) {
             onclick: async () => {
               await api.markIntroSeen().catch(() => {});
               store.invalidate(store.state.active);
-              toast("The first-run note will show again on the Overview page.", "ok");
+              toast("The first-run note will show again on Overview.", "ok");
             },
           },
           "Show the intro again",
@@ -216,12 +216,12 @@ function indexRow() {
   function show(status) {
     note.textContent = status.fetched
       ? `PyPI index: ${status.names.toLocaleString()} names, fetched ${status.fetched}`
-      : "PyPI index: not downloaded yet — the first search fetches it once.";
+      : "PyPI index: not downloaded. The first search fetches it.";
   }
 
   async function refetch() {
     button.disabled = true;
-    note.textContent = "Downloading every name on PyPI — this takes a minute…";
+    note.textContent = "Downloading every name on PyPI. About a minute…";
     try {
       show(await api.refreshIndex());
       toast("PyPI index refreshed.", "ok");
