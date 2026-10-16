@@ -1,115 +1,131 @@
 package pip
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"Cokpyt/backend/environments"
 )
 
-// CleanupInfo holds the reclaimable size for each cleanup category.
-type CleanupInfo struct {
-	CacheSize   string `json:"cacheSize"`
-	EggInfoSize string `json:"eggInfoSize"`
-	PycacheSize string `json:"pycacheSize"`
+// Reclaim is the disk space one cleanup category would free.
+type Reclaim struct {
+	Kind  string `json:"kind"`
+	Label string `json:"label"`
+	Size  int64  `json:"size"`
+	Files int    `json:"files"`
+	Path  string `json:"path"`
 }
 
-// GetCleanupInfo measures the reclaimable space for each cleanup category.
-func GetCleanupInfo() (CleanupInfo, error) {
-	var info CleanupInfo
-
-	if cacheDir, err := pipCacheDir(); err == nil {
-		info.CacheSize = formatSize(dirSize(cacheDir))
-	} else {
-		info.CacheSize = "0 B"
+// CleanupInfo measures what each cleanup category currently costs.
+//
+// The cache is pip's own download cache and is global, so it is only reported
+// once, against whichever environment asked first.
+func CleanupInfo(env environments.Env) []Reclaim {
+	categories := []Reclaim{
+		{Kind: "cache", Label: "pip download cache"},
+		{Kind: "orphan", Label: "leftover .egg-info directories"},
+		{Kind: "temp", Label: "__pycache__ folders"},
 	}
 
-	sp, err := getSitePackages()
-	if err != nil {
-		info.EggInfoSize = "0 B"
-		info.PycacheSize = "0 B"
-		return info, nil
+	if dir, err := cacheDir(env); err == nil {
+		size, files := measure(dir)
+		categories[0].Path, categories[0].Size, categories[0].Files = dir, size, files
 	}
 
-	var eggSize, pycSize int64
-	filepath.WalkDir(sp, func(path string, d os.DirEntry, err error) error {
-		if err != nil || !d.IsDir() {
-			return nil
+	for _, site := range sitePackagesDirs(env) {
+		for _, pattern := range []struct {
+			kind  int
+			glob  string
+			match func(string) bool
+		}{
+			{1, "*.egg-info", nil},
+			{2, "__pycache__", nil},
+		} {
+			matches, _ := filepath.Glob(filepath.Join(site, pattern.glob))
+			for _, match := range matches {
+				size, files := measure(match)
+				categories[pattern.kind].Size += size
+				categories[pattern.kind].Files += files
+				categories[pattern.kind].Path = site
+			}
 		}
-		name := d.Name()
-		if strings.HasSuffix(name, ".egg-info") {
-			eggSize += dirSize(path)
-			return filepath.SkipDir
-		}
-		if name == "__pycache__" {
-			pycSize += dirSize(path)
-			return filepath.SkipDir
-		}
-		return nil
-	})
-
-	info.EggInfoSize = formatSize(eggSize)
-	info.PycacheSize = formatSize(pycSize)
-	return info, nil
+	}
+	return categories
 }
 
-// RunCleanup performs the requested cleanup operations.
-// types may contain "cache", "orphan", and/or "temp".
-func RunCleanup(types []string) error {
-	for _, t := range types {
-		switch t {
+// Cleanup removes the requested categories from the environment.
+func Cleanup(env environments.Env, kinds []string) error {
+	var problems []string
+	for _, kind := range kinds {
+		switch kind {
 		case "cache":
-			if out, err := pip("cache", "purge").CombinedOutput(); err != nil {
-				return fmt.Errorf("pip cache purge: %s", strings.TrimSpace(string(out)))
+			if out, err := env.Pip("cache", "purge").CombinedOutput(); err != nil {
+				problems = append(problems, "cache: "+failureReason(out, err))
+			} else {
+				emitLog("INFO", "purged pip download cache")
 			}
 		case "orphan":
-			sp, err := getSitePackages()
-			if err != nil {
-				return err
-			}
-			filepath.WalkDir(sp, func(path string, d os.DirEntry, err error) error {
-				if err == nil && d.IsDir() && strings.HasSuffix(d.Name(), ".egg-info") {
-					os.RemoveAll(path)
-					return filepath.SkipDir
-				}
-				return nil
-			})
+			problems = append(problems, removeIn(env, "*.egg-info", "egg-info")...)
 		case "temp":
-			sp, err := getSitePackages()
-			if err != nil {
-				return err
-			}
-			filepath.WalkDir(sp, func(path string, d os.DirEntry, err error) error {
-				if err == nil && d.IsDir() && d.Name() == "__pycache__" {
-					os.RemoveAll(path)
-					return filepath.SkipDir
-				}
-				return nil
-			})
+			problems = append(problems, removeIn(env, "__pycache__", "__pycache__")...)
 		}
+	}
+	if len(problems) > 0 {
+		return errors.New(strings.Join(problems, "; "))
 	}
 	return nil
 }
 
-func pipCacheDir() (string, error) {
-	out, err := pip("cache", "dir").Output()
+// removeIn deletes every matching entry in the environment's site-packages.
+// Leftovers pip no longer tracks are the ones most likely to be read-only, and
+// "could not remove X" is more useful than a silent partial success.
+func removeIn(env environments.Env, pattern, label string) []string {
+	var problems []string
+	removed := 0
+	for _, site := range sitePackagesDirs(env) {
+		matches, _ := filepath.Glob(filepath.Join(site, pattern))
+		for _, match := range matches {
+			if err := os.RemoveAll(match); err != nil {
+				problems = append(problems, label+" "+match+": "+err.Error())
+				continue
+			}
+			removed++
+		}
+	}
+	emitLog("INFO", fmt.Sprintf("removed %d %s entries", removed, label))
+	return problems
+}
+
+// cacheDir asks pip where its cache lives. Asking beats guessing: the location
+// moves between platforms and honours PIP_CACHE_DIR.
+func cacheDir(env environments.Env) (string, error) {
+	out, err := env.Pip("cache", "dir").Output()
 	if err != nil {
 		return "", err
 	}
-	// Take the last non-empty line to skip any deprecation warnings.
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		if l := strings.TrimSpace(lines[i]); l != "" {
-			return l, nil
-		}
+	// Take the last non-empty line: pip may print a warning before the path.
+	if path := lastNonEmptyLine(string(out)); path != "" {
+		return path, nil
 	}
-	return "", fmt.Errorf("no output from pip cache dir")
+	return "", errors.New("pip did not report a cache directory")
 }
 
-func getSitePackages() (string, error) {
-	out, err := python("-c", "import site; print(site.getsitepackages()[0])").Output()
-	if err != nil {
-		return "", fmt.Errorf("could not find site-packages: %w", err)
-	}
-	return strings.TrimSpace(string(out)), nil
+// measure returns the total size and file count under a path.
+func measure(path string) (int64, int) {
+	var size int64
+	files := 0
+	filepath.WalkDir(path, func(_ string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return nil
+		}
+		if info, err := entry.Info(); err == nil {
+			size += info.Size()
+			files++
+		}
+		return nil
+	})
+	return size, files
 }

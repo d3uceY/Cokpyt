@@ -3,7 +3,6 @@ package pip
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
@@ -17,24 +16,12 @@ type LogEntry struct {
 
 var logMu sync.Mutex
 
-func logsPath() (string, error) {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(base, "Cokpyt")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "logs.json"), nil
-}
-
 // AppendLog persists a new log entry to the logs file.
 func AppendLog(level, msg string) {
 	logMu.Lock()
 	defer logMu.Unlock()
 
-	path, err := logsPath()
+	path, err := statePath("logs.json")
 	if err != nil {
 		return
 	}
@@ -60,7 +47,7 @@ func AppendLog(level, msg string) {
 
 // GetLogs returns all recorded log entries, oldest first.
 func GetLogs() ([]LogEntry, error) {
-	path, err := logsPath()
+	path, err := statePath("logs.json")
 	if err != nil {
 		return nil, err
 	}
@@ -76,4 +63,17 @@ func GetLogs() ([]LogEntry, error) {
 		return nil, err
 	}
 	return entries, nil
+}
+
+// ClearLogs empties the log file, keeping the file itself so appends do not
+// have to recreate the directory.
+func ClearLogs() error {
+	logMu.Lock()
+	defer logMu.Unlock()
+
+	path, err := statePath("logs.json")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte("[]"), 0o644)
 }

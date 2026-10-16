@@ -4,155 +4,227 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 )
 
-// SearchResult represents a package found on PyPI.
+// SearchResult is a package found on PyPI.
 type SearchResult struct {
 	Name        string `json:"name"`
 	Version     string `json:"version"`
 	Description string `json:"description"`
-	Author      string `json:"author"`
 	HomePage    string `json:"homePage"`
+	Installed   bool   `json:"installed"`
 }
 
-// PythonInfo holds the active Python and pip versions.
-type PythonInfo struct {
-	PythonVersion string `json:"pythonVersion"`
-	PipVersion    string `json:"pipVersion"`
-}
+// ── the name index ───────────────────────────────────────────────────────────
+//
+// The simple index holds a name for every project on PyPI: hundreds of
+// thousands of them, tens of megabytes on the wire. Downloading it is the
+// heaviest thing this app does, so the names are written to disk once and read
+// back from there on every later run. Downloading it again is the user's call.
 
-var httpClient = &http.Client{Timeout: 30 * time.Second}
+const indexFile = "pypi-index.txt"
 
-// — Simple index cache —
+// indexPath is where the index is stored. A variable so a test can point it at
+// a temp file.
+var indexPath = func() (string, error) { return statePath(indexFile) }
 
 var (
-	simpleIndexMu    sync.RWMutex
-	simpleIndexNames []string // normalised (lowercase, hyphen-normalised)
-	simpleIndexRaw   []string // original casing from PyPI
-	simpleIndexReady bool
+	indexMu    sync.RWMutex
+	indexNames []string // normalised, one per line on disk
+	indexReady bool
 )
 
-type simpleIndexResponse struct {
-	Projects []struct {
-		Name string `json:"name"`
-	} `json:"projects"`
+// IndexStatus describes the stored index. Fetched is empty when nothing has
+// been stored yet.
+type IndexStatus struct {
+	Names   int    `json:"names"`
+	Fetched string `json:"fetched"`
 }
 
-// loadSimpleIndex fetches the full package name list from the PyPI Simple JSON
-// API and caches it for the lifetime of the process. Errors are not cached,
-// so the next search will retry if a previous attempt failed.
-func loadSimpleIndex() ([]string, []string, error) {
-	// Fast path: already loaded.
-	simpleIndexMu.RLock()
-	if simpleIndexReady {
-		raw, norm := simpleIndexRaw, simpleIndexNames
-		simpleIndexMu.RUnlock()
-		return raw, norm, nil
+// WarmIndex loads the stored index so the first search is instant, and
+// downloads it when nothing has been stored yet. Called once at startup;
+// failing is fine, the next search retries.
+func WarmIndex() {
+	if _, err := loadIndex(); err != nil {
+		emitLog("ERR", "could not build the PyPI index: "+err.Error())
 	}
-	simpleIndexMu.RUnlock()
+}
 
-	// Slow path: fetch the index.
-	simpleIndexMu.Lock()
-	defer simpleIndexMu.Unlock()
-	// Double-check after acquiring write lock.
-	if simpleIndexReady {
-		return simpleIndexRaw, simpleIndexNames, nil
-	}
-
-	req, err := http.NewRequest("GET", "https://pypi.org/simple/", nil)
+// RefreshIndex downloads the index again, replacing the stored copy.
+func RefreshIndex() (IndexStatus, error) {
+	names, err := fetchIndex()
 	if err != nil {
-		return nil, nil, err
+		return CachedIndex(), err
 	}
+
+	indexMu.Lock()
+	indexNames, indexReady = names, true
+	indexMu.Unlock()
+
+	// A cache that cannot be written still works for this session, and the next
+	// launch downloads it again.
+	if err := saveIndex(names); err != nil {
+		emitLog("WARN", "could not store the PyPI index: "+err.Error())
+	}
+	emitLog("INFO", fmt.Sprintf("PyPI index refreshed: %d names", len(names)))
+	return CachedIndex(), nil
+}
+
+// CachedIndex reports what is stored, without touching the network.
+func CachedIndex() IndexStatus {
+	indexMu.RLock()
+	names := len(indexNames)
+	indexMu.RUnlock()
+
+	status := IndexStatus{Names: names}
+	path, err := indexPath()
+	if err != nil {
+		return status
+	}
+	if fi, err := os.Stat(path); err == nil {
+		status.Fetched = fi.ModTime().Format("2006-01-02 15:04:05")
+	}
+	return status
+}
+
+// loadIndex returns the index from memory, then from disk, and only then from
+// PyPI.
+func loadIndex() ([]string, error) {
+	indexMu.RLock()
+	names, ready := indexNames, indexReady
+	indexMu.RUnlock()
+	if ready {
+		return names, nil
+	}
+
+	indexMu.Lock()
+	defer indexMu.Unlock()
+	if indexReady {
+		return indexNames, nil
+	}
+
+	names, err := readIndex()
+	if err != nil || len(names) == 0 {
+		if names, err = fetchIndex(); err != nil {
+			return nil, err
+		}
+		if err := saveIndex(names); err != nil {
+			emitLog("WARN", "could not store the PyPI index: "+err.Error())
+		}
+	}
+	indexNames, indexReady = names, true
+	return indexNames, nil
+}
+
+// readIndex reads the stored names, one per line.
+func readIndex() ([]string, error) {
+	path, err := indexPath()
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, line := range strings.Split(string(data), "\n") {
+		if line != "" {
+			names = append(names, line)
+		}
+	}
+	return names, nil
+}
+
+// saveIndex writes one name per line. Distribution names never contain a
+// newline, so the file needs no encoding and reads back without a parser.
+func saveIndex(names []string) error {
+	path, err := indexPath()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(strings.Join(names, "\n")), 0o644)
+}
+
+// fetchIndex downloads the simple index and returns every project name,
+// normalised — "PyYAML" and "pyyaml" are one project, and one project is one
+// entry in the search list.
+func fetchIndex() ([]string, error) {
+	req, err := http.NewRequest(http.MethodGet, "https://pypi.org/simple/", nil)
+	if err != nil {
+		return nil, err
+	}
+	// The JSON form of the simple index is one request; the HTML form is a
+	// much larger document holding the same names.
 	req.Header.Set("Accept", "application/vnd.pypi.simple.v1+json")
 
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, nil, fmt.Errorf("simple index returned status %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("PyPI index returned HTTP %d", resp.StatusCode)
 	}
 
-	var index simpleIndexResponse
-	if err := json.NewDecoder(resp.Body).Decode(&index); err != nil {
-		return nil, nil, err
+	var payload struct {
+		Projects []struct {
+			Name string `json:"name"`
+		} `json:"projects"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
 	}
 
-	raw := make([]string, len(index.Projects))
-	norm := make([]string, len(index.Projects))
-	for i, p := range index.Projects {
-		raw[i] = p.Name
-		norm[i] = normalise(p.Name)
+	names := make([]string, len(payload.Projects))
+	for i, project := range payload.Projects {
+		names[i] = normalise(project.Name)
 	}
-
-	simpleIndexRaw = raw
-	simpleIndexNames = norm
-	simpleIndexReady = true
-	return raw, norm, nil
+	return names, nil
 }
 
-// normalise lowercases and replaces underscores/dots with hyphens (PEP 503).
-func normalise(s string) string {
-	s = strings.ToLower(s)
-	s = strings.ReplaceAll(s, "_", "-")
-	s = strings.ReplaceAll(s, ".", "-")
-	return s
-}
-
-// WarmSimpleIndex pre-fetches the PyPI Simple index in the background.
-// Call this once at startup so the first search is instant.
-func WarmSimpleIndex() {
-	loadSimpleIndex() //nolint:errcheck
-}
-
-// SearchPackages searches the PyPI Simple index for packages matching query,
-// then fetches metadata for the top results in parallel.
-func SearchPackages(query string) ([]SearchResult, error) {
+// Search finds packages on PyPI by name, best match first, then fills in the
+// metadata for the shortlist in parallel.
+func Search(query string) ([]SearchResult, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
-		return nil, fmt.Errorf("query is empty")
+		return []SearchResult{}, nil
 	}
+	want := normalise(query)
 
-	raw, norm, err := loadSimpleIndex()
+	names, err := loadIndex()
 	if err != nil {
-		// fallback: single exact-match lookup
-		return fetchPackageMetadata(query)
+		// The index is a convenience. An exact name still works without it.
+		return metadata(query)
 	}
 
-	normQuery := normalise(query)
-
-	// Score each name: exact > prefix > contains.
 	type scored struct {
-		name  string
+		index int
 		score int
 	}
 	var matches []scored
-	for i, n := range norm {
-		var sc int
-		if n == normQuery {
-			sc = 3
-		} else if strings.HasPrefix(n, normQuery) {
-			sc = 2
-		} else if strings.Contains(n, normQuery) {
-			sc = 1
-		} else {
-			continue
+	for i, name := range names {
+		switch {
+		case name == want:
+			matches = append(matches, scored{i, 3})
+		case strings.HasPrefix(name, want):
+			matches = append(matches, scored{i, 2})
+		case strings.Contains(name, want):
+			matches = append(matches, scored{i, 1})
 		}
-		matches = append(matches, scored{raw[i], sc})
 	}
-
 	sort.SliceStable(matches, func(i, j int) bool {
 		if matches[i].score != matches[j].score {
 			return matches[i].score > matches[j].score
 		}
-		return len(matches[i].name) < len(matches[j].name)
+		// Shorter names are closer to the query than longer ones that merely
+		// contain it, so "requests" beats "requests-toolbelt".
+		return len(names[matches[i].index]) < len(names[matches[j].index])
 	})
 
 	const maxResults = 20
@@ -160,52 +232,38 @@ func SearchPackages(query string) ([]SearchResult, error) {
 		matches = matches[:maxResults]
 	}
 
-	// Fetch metadata in parallel.
-	type result struct {
-		idx int
-		res SearchResult
-		err error
-	}
-	ch := make(chan result, len(matches))
-	for i, m := range matches {
-		go func(idx int, name string) {
-			results, err := fetchPackageMetadata(name)
-			if err != nil || len(results) == 0 {
-				ch <- result{idx: idx, err: err}
-				return
+	results := make([]SearchResult, len(matches))
+	var wg sync.WaitGroup
+	for i, match := range matches {
+		wg.Add(1)
+		go func(i int, name string) {
+			defer wg.Done()
+			if found, err := metadata(name); err == nil && len(found) > 0 {
+				results[i] = found[0]
 			}
-			ch <- result{idx: idx, res: results[0]}
-		}(i, m.name)
+		}(i, names[match.index])
 	}
+	wg.Wait()
 
-	out := make([]SearchResult, len(matches))
-	for range matches {
-		r := <-ch
-		if r.err == nil {
-			out[r.idx] = r.res
+	// Metadata lookups can fail individually; drop the gaps.
+	kept := results[:0]
+	for _, result := range results {
+		if result.Name != "" {
+			kept = append(kept, result)
 		}
 	}
-
-	// Remove empty slots (failed fetches).
-	filtered := out[:0]
-	for _, r := range out {
-		if r.Name != "" {
-			filtered = append(filtered, r)
-		}
-	}
-	return filtered, nil
+	return kept, nil
 }
 
-// fetchPackageMetadata fetches metadata for a single package from the PyPI JSON API.
-func fetchPackageMetadata(name string) ([]SearchResult, error) {
-	url := fmt.Sprintf("https://pypi.org/pypi/%s/json", name)
-	resp, err := httpClient.Get(url)
+// metadata fetches one package's details from the PyPI JSON API.
+func metadata(name string) ([]SearchResult, error) {
+	resp, err := httpClient.Get("https://pypi.org/pypi/" + name + "/json")
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("PyPI returned HTTP %d for %s", resp.StatusCode, name)
 	}
 
 	var payload struct {
@@ -213,7 +271,6 @@ func fetchPackageMetadata(name string) ([]SearchResult, error) {
 			Name        string            `json:"name"`
 			Version     string            `json:"version"`
 			Summary     string            `json:"summary"`
-			Author      string            `json:"author"`
 			HomePage    string            `json:"home_page"`
 			ProjectURLs map[string]string `json:"project_urls"`
 		} `json:"info"`
@@ -221,48 +278,19 @@ func fetchPackageMetadata(name string) ([]SearchResult, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		return nil, err
 	}
-	homePage := payload.Info.HomePage
-	if homePage == "" {
-		if u, ok := payload.Info.ProjectURLs["Homepage"]; ok {
-			homePage = u
+	home := payload.Info.HomePage
+	if home == "" {
+		for _, key := range []string{"Homepage", "Home", "Source", "Repository", "Documentation"} {
+			if url := payload.Info.ProjectURLs[key]; url != "" {
+				home = url
+				break
+			}
 		}
 	}
 	return []SearchResult{{
 		Name:        payload.Info.Name,
 		Version:     payload.Info.Version,
 		Description: payload.Info.Summary,
-		Author:      payload.Info.Author,
-		HomePage:    homePage,
+		HomePage:    home,
 	}}, nil
-}
-
-// GetPythonInfo returns the active Python and pip versions.
-func GetPythonInfo() (PythonInfo, error) {
-	var info PythonInfo
-
-	pyOut, err := python("--version").Output()
-	if err != nil {
-		// try stderr — Python 2 printed to stderr
-		combined, err2 := python("--version").CombinedOutput()
-		if err2 != nil {
-			info.PythonVersion = "unknown"
-		} else {
-			info.PythonVersion = strings.TrimSpace(strings.TrimPrefix(string(combined), "Python "))
-		}
-	} else {
-		info.PythonVersion = strings.TrimSpace(strings.TrimPrefix(string(pyOut), "Python "))
-	}
-
-	pipOut, err := pip("--version").Output()
-	if err != nil {
-		info.PipVersion = "unknown"
-	} else {
-		// "pip 25.3 from ... (python 3.14)" → "25.3"
-		parts := strings.Fields(string(pipOut))
-		if len(parts) >= 2 {
-			info.PipVersion = parts[1]
-		}
-	}
-
-	return info, nil
 }

@@ -5,127 +5,111 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"Cokpyt/backend/environments"
 )
 
-// DoctorCheck represents a single diagnostic check result.
-type DoctorCheck struct {
-	Name    string `json:"name"`
-	Status  string `json:"status"`  // "ok" | "warn" | "fail"
-	Detail  string `json:"detail"`  // version, path, or error message
-	FixURL  string `json:"fixUrl"`  // link to fix page, if applicable
-	FixHint string `json:"fixHint"` // short install instruction
+// Check is one diagnostic result.
+type Check struct {
+	Name   string `json:"name"`
+	Status string `json:"status"` // "ok" | "warn" | "fail"
+	Detail string `json:"detail"`
+	Hint   string `json:"hint"`
+	FixURL string `json:"fixUrl"`
 }
 
-// DoctorReport is the full result of RunDoctor.
-type DoctorReport struct {
-	Checks []DoctorCheck `json:"checks"`
-	OK     bool          `json:"ok"` // true only if all checks are "ok" or "warn"
+// Report is the full result of Doctor.
+type Report struct {
+	Env    string  `json:"env"`
+	Checks []Check `json:"checks"`
+	OK     bool    `json:"ok"`
 }
 
-// RunDoctor runs all diagnostic checks and returns a report.
-func RunDoctor() DoctorReport {
-	checks := []DoctorCheck{
-		checkPython(),
-		checkPip(),
-		checkPyPIReachability(),
+// Doctor runs the environment checks for one interpreter.
+func Doctor(env environments.Env) Report {
+	checks := []Check{
+		checkInterpreter(env),
+		checkPip(env),
+		checkPyPI(),
 	}
-
-	allOK := true
-	for _, c := range checks {
-		if c.Status == "fail" {
-			allOK = false
-			break
+	ok := true
+	for _, check := range checks {
+		if check.Status == "fail" {
+			ok = false
 		}
 	}
-
-	return DoctorReport{Checks: checks, OK: allOK}
+	return Report{Env: env.Python, Checks: checks, OK: ok}
 }
 
-func checkPython() DoctorCheck {
-	out, err := python("--version").CombinedOutput()
+func checkInterpreter(env environments.Env) Check {
+	out, err := env.Cmd("-c", "import sys;print(sys.version.split()[0])").CombinedOutput()
 	if err != nil {
-		return DoctorCheck{
-			Name:    "Python",
-			Status:  "fail",
-			Detail:  "python executable not found on PATH",
-			FixURL:  "https://www.python.org/downloads/",
-			FixHint: "Download and install Python from python.org, then make sure it is added to your PATH.",
+		return Check{
+			Name:   "Interpreter",
+			Status: "fail",
+			Detail: fmt.Sprintf("%s cannot be run", env.Python),
+			Hint:   "The interpreter may have been moved or deleted since it was installed.",
+			FixURL: "https://www.python.org/downloads/",
 		}
 	}
-
-	raw := strings.TrimSpace(string(out))
-	version := strings.TrimPrefix(raw, "Python ")
-
-	// Warn if Python 2
+	version := strings.TrimSpace(string(out))
 	if strings.HasPrefix(version, "2.") {
-		return DoctorCheck{
-			Name:    "Python",
-			Status:  "warn",
-			Detail:  fmt.Sprintf("Python %s (Python 2 is unsupported)", version),
-			FixURL:  "https://www.python.org/downloads/",
-			FixHint: "Upgrade to Python 3.8 or later for full pip support.",
+		return Check{
+			Name:   "Interpreter",
+			Status: "warn",
+			Detail: "Python " + version + " — Python 2 has no pip support left",
+			Hint:   "Upgrade to Python 3.8 or newer for full pip support.",
+			FixURL: "https://www.python.org/downloads/",
 		}
 	}
-
-	path, _ := python("-c", "import sys; print(sys.executable)").Output()
-	detail := fmt.Sprintf("Python %s — %s", version, strings.TrimSpace(string(path)))
-
-	return DoctorCheck{Name: "Python", Status: "ok", Detail: detail}
-}
-
-func checkPip() DoctorCheck {
-	out, err := pip("--version").Output()
-	if err != nil {
-		return DoctorCheck{
-			Name:    "pip",
-			Status:  "fail",
-			Detail:  "pip module not found",
-			FixURL:  "https://pip.pypa.io/en/stable/installation/",
-			FixHint: "Run: python -m ensurepip --upgrade",
-		}
-	}
-
-	// "pip 25.0 from /path (python 3.x)"
-	parts := strings.Fields(strings.TrimSpace(string(out)))
-	version := "unknown"
-	if len(parts) >= 2 {
-		version = parts[1]
-	}
-
-	return DoctorCheck{
-		Name:   "pip",
+	return Check{
+		Name:   "Interpreter",
 		Status: "ok",
-		Detail: fmt.Sprintf("pip %s", version),
+		Detail: fmt.Sprintf("Python %s at %s", version, env.Python),
 	}
 }
 
-func checkPyPIReachability() DoctorCheck {
+func checkPip(env environments.Env) Check {
+	out, err := env.Pip("--version").Output()
+	if err != nil {
+		return Check{
+			Name:   "pip",
+			Status: "fail",
+			Detail: "this environment has no pip",
+			Hint:   "Run: " + env.Python + " -m ensurepip --upgrade",
+			FixURL: "https://pip.pypa.io/en/stable/installation/",
+		}
+	}
+	// "pip 25.3 from C:\... (python 3.14)"
+	fields := strings.Fields(string(out))
+	version := "unknown"
+	if len(fields) >= 2 {
+		version = fields[1]
+	}
+	return Check{Name: "pip", Status: "ok", Detail: "pip " + version + " in " + env.Label}
+}
+
+func checkPyPI() Check {
 	client := &http.Client{Timeout: 8 * time.Second}
 	resp, err := client.Head("https://pypi.org/simple/")
 	if err != nil {
-		return DoctorCheck{
-			Name:    "PyPI network",
-			Status:  "fail",
-			Detail:  "Cannot reach pypi.org: " + err.Error(),
-			FixURL:  "https://status.python.org/",
-			FixHint: "Check your internet connection or corporate proxy settings.",
+		return Check{
+			Name:   "PyPI",
+			Status: "fail",
+			Detail: "pypi.org is unreachable: " + err.Error(),
+			Hint:   "Check your connection, or your proxy settings if you are behind one.",
+			FixURL: "https://status.python.org/",
 		}
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode >= 500 {
-		return DoctorCheck{
-			Name:    "PyPI network",
-			Status:  "warn",
-			Detail:  fmt.Sprintf("PyPI returned HTTP %d", resp.StatusCode),
-			FixURL:  "https://status.python.org/",
-			FixHint: "PyPI may be experiencing issues. Check status.python.org.",
+		return Check{
+			Name:   "PyPI",
+			Status: "warn",
+			Detail: fmt.Sprintf("pypi.org returned HTTP %d", resp.StatusCode),
+			Hint:   "PyPI itself may be having trouble — check status.python.org.",
+			FixURL: "https://status.python.org/",
 		}
 	}
-
-	return DoctorCheck{
-		Name:   "PyPI network",
-		Status: "ok",
-		Detail: "pypi.org is reachable",
-	}
+	return Check{Name: "PyPI", Status: "ok", Detail: "pypi.org is reachable"}
 }

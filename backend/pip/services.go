@@ -1,242 +1,61 @@
+// Package pip runs package operations against one specific Python
+// environment.
+//
+// Every function takes the environment it should act on, and none of them
+// consult the config for "the" interpreter. That is deliberate: on a machine
+// with several environments there is no such thing as the interpreter, and the
+// bug this avoids is silently reporting one environment's packages as if they
+// were the machine's.
 package pip
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"os/exec"
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"sort"
 	"strings"
 	"sync"
+	"time"
+
+	"Cokpyt/backend/environments"
 )
 
-// OutdatedPackage represents a pip package that has a newer version available.
-type OutdatedPackage struct {
-	Name          string `json:"name"`
-	Version       string `json:"version"`
-	LatestVersion string `json:"latestVersion"`
-	BumpType      string `json:"bumpType"`     // "major" | "minor" | "patch"
-	ChangelogURL  string `json:"changelogUrl"` // URL to the package changelog, if available
-}
-
-// PipPackage represents an installed pip package with its metadata.
-type PipPackage struct {
-	Name          string `json:"name"`
-	Version       string `json:"version"`
-	LatestVersion string `json:"latestVersion"`
-	Summary       string `json:"summary"`
-	Status        string `json:"status"` // "up-to-date" | "update-available"
-}
-
-type pipListEntry struct {
+// Package is one installed distribution.
+type Package struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
+	Summary string `json:"summary"`
 }
 
-type pipOutdatedEntry struct {
-	Name           string `json:"name"`
-	Version        string `json:"version"`
-	LatestVersion  string `json:"latest_version"`
-	LatestFileType string `json:"latest_filetype"`
+// Outdated is a package with a newer version on PyPI. Working this out needs
+// the network, so it is kept out of List and fetched on its own.
+type Outdated struct {
+	Name          string `json:"name"`
+	Version       string `json:"version"`
+	LatestVersion string `json:"latestVersion"`
+	BumpType      string `json:"bumpType"` // "major" | "minor" | "patch"
+	ChangelogURL  string `json:"changelogUrl"`
 }
 
-// pip returns an exec.Cmd that runs the active environment's python -m pip with the given arguments.
-// Using "python -m pip" ensures pip is found even when it is not on PATH directly.
-// --disable-pip-version-check suppresses pip's self-update notification UI.
-func pip(args ...string) *exec.Cmd {
-	allArgs := append([]string{"-m", "pip", "--disable-pip-version-check"}, args...)
-	cmd := exec.Command(getPythonExe(), allArgs...)
-	hideWindow(cmd)
-	return cmd
+// EnvInfo describes an interpreter.
+type EnvInfo struct {
+	PythonVersion string `json:"pythonVersion"`
+	PipVersion    string `json:"pipVersion"`
+	PythonPath    string `json:"pythonPath"`
+	Prefix        string `json:"prefix"`
+	BasePrefix    string `json:"basePrefix"`
+	SitePackages  string `json:"sitePackages"`
+	Virtual       bool   `json:"virtual"`
 }
 
-// python returns an exec.Cmd that runs the active environment's python with the given arguments.
-func python(args ...string) *exec.Cmd {
-	cmd := exec.Command(getPythonExe(), args...)
-	hideWindow(cmd)
-	return cmd
-}
-
-// pypiInfoResponse is used to parse the changelog URL from the PyPI JSON API.
-type pypiInfoResponse struct {
-	Info struct {
-		ProjectURLs map[string]string `json:"project_urls"`
-	} `json:"info"`
-}
-
-// fetchChangelogURL queries the PyPI JSON API for a package and returns the
-// changelog URL from project_urls, or an empty string if not found.
-func fetchChangelogURL(name string) string {
-	resp, err := http.Get("https://pypi.org/pypi/" + name + "/json")
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return ""
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return ""
-	}
-	var info pypiInfoResponse
-	if err := json.Unmarshal(body, &info); err != nil {
-		return ""
-	}
-	for key, url := range info.Info.ProjectURLs {
-		if strings.Contains(strings.ToLower(key), "changelog") ||
-			strings.Contains(strings.ToLower(key), "change log") ||
-			strings.Contains(strings.ToLower(key), "changes") ||
-			strings.Contains(strings.ToLower(key), "release notes") {
-			return url
-		}
-	}
-	return ""
-}
-
-// GetOutdatedPackages returns packages that have a newer version available on PyPI.
-func GetOutdatedPackages() ([]OutdatedPackage, error) {
-	out, err := pip("list", "--outdated", "--format=json").Output()
-	if err != nil {
-		return nil, fmt.Errorf("pip list --outdated failed: %w", err)
-	}
-	var entries []pipOutdatedEntry
-	if err := json.Unmarshal(out, &entries); err != nil {
-		return nil, fmt.Errorf("failed to parse pip list --outdated output: %w", err)
-	}
-	packages := make([]OutdatedPackage, len(entries))
-	for i, e := range entries {
-		packages[i] = OutdatedPackage{
-			Name:          e.Name,
-			Version:       e.Version,
-			LatestVersion: e.LatestVersion,
-			BumpType:      classifyBump(e.Version, e.LatestVersion),
-		}
-	}
-	// Fetch changelog URLs concurrently from PyPI.
-	var wg sync.WaitGroup
-	for i := range packages {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			packages[i].ChangelogURL = fetchChangelogURL(packages[i].Name)
-		}(i)
-	}
-	wg.Wait()
-	return packages, nil
-}
-
-// classifyBump returns "major", "minor", or "patch" based on semver segment changes.
-func classifyBump(current, latest string) string {
-	cp := strings.SplitN(current, ".", 3)
-	lp := strings.SplitN(latest, ".", 3)
-	if len(cp) > 0 && len(lp) > 0 && cp[0] != lp[0] {
-		return "major"
-	}
-	if len(cp) > 1 && len(lp) > 1 && cp[1] != lp[1] {
-		return "minor"
-	}
-	return "patch"
-}
-
-// GetInstalledPackages returns all installed pip packages with version and update status.
-func GetInstalledPackages() ([]PipPackage, error) {
-	installedOut, err := pip("list", "--format=json").Output()
-	if err != nil {
-		return nil, fmt.Errorf("pip list failed: %w", err)
-	}
-
-	var installed []pipListEntry
-	if err := json.Unmarshal(installedOut, &installed); err != nil {
-		return nil, fmt.Errorf("failed to parse pip list output: %w", err)
-	}
-
-	outdatedOut, _ := pip("list", "--outdated", "--format=json").Output()
-	var outdated []pipOutdatedEntry
-	json.Unmarshal(outdatedOut, &outdated)
-
-	outdatedMap := make(map[string]string)
-	for _, o := range outdated {
-		outdatedMap[strings.ToLower(o.Name)] = o.LatestVersion
-	}
-
-	names := make([]string, len(installed))
-	for i, pkg := range installed {
-		names[i] = pkg.Name
-	}
-	summaryMap := batchGetSummaries(names)
-
-	packages := make([]PipPackage, len(installed))
-	for i, pkg := range installed {
-		key := strings.ToLower(pkg.Name)
-		latestVer, isOutdated := outdatedMap[key]
-		if !isOutdated {
-			latestVer = pkg.Version
-		}
-		status := "up-to-date"
-		if isOutdated {
-			status = "update-available"
-		}
-		packages[i] = PipPackage{
-			Name:          pkg.Name,
-			Version:       pkg.Version,
-			LatestVersion: latestVer,
-			Summary:       summaryMap[key],
-			Status:        status,
-		}
-	}
-
-	return packages, nil
-}
-
-// batchGetSummaries fetches package summaries in batches using pip show.
-func batchGetSummaries(names []string) map[string]string {
-	summaries := make(map[string]string)
-	if len(names) == 0 {
-		return summaries
-	}
-
-	const batchSize = 50
-	for i := 0; i < len(names); i += batchSize {
-		end := i + batchSize
-		if end > len(names) {
-			end = len(names)
-		}
-		batch := names[i:end]
-		out, err := pip(append([]string{"show"}, batch...)...).Output()
-		if err != nil {
-			continue
-		}
-		for name, summary := range parsePipShow(string(out)) {
-			summaries[name] = summary
-		}
-	}
-	return summaries
-}
-
-// parsePipShow parses multi-package `pip show` output into a name→summary map.
-func parsePipShow(output string) map[string]string {
-	result := make(map[string]string)
-	blocks := strings.Split(output, "---")
-	for _, block := range blocks {
-		var name, summary string
-		for _, line := range strings.Split(block, "\n") {
-			line = strings.TrimRight(line, "\r")
-			if after, ok := strings.CutPrefix(line, "Name: "); ok {
-				name = strings.TrimSpace(after)
-			} else if after, ok := strings.CutPrefix(line, "Summary: "); ok {
-				summary = strings.TrimSpace(after)
-			}
-		}
-		if name != "" {
-			result[strings.ToLower(name)] = summary
-		}
-	}
-	return result
-}
-
-// LogEmitter is set by app.go to forward log lines to the frontend via Wails events.
+// LogEmitter is set by the app so log lines reach the frontend as they happen.
 var LogEmitter func(level, msg string)
 
-// emitLog sends a log message to the frontend if LogEmitter is set.
 func emitLog(level, msg string) {
 	AppendLog(level, msg)
 	if LogEmitter != nil {
@@ -244,106 +63,394 @@ func emitLog(level, msg string) {
 	}
 }
 
-// InstallPackage installs a pip package by name.
-func InstallPackage(name string) error {
-	cmdStr := "pip install " + name
-	emitLog("INFO", "Running: "+cmdStr)
-	cmd := pip("install", name)
-	stdout, _ := cmd.StdoutPipe()
+// ── reading what is installed ────────────────────────────────────────────────
+
+type listEntry struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// List returns every distribution the environment's pip reports.
+//
+// Summaries come from a single interpreter call rather than batched `pip show`
+// runs: the metadata is already on disk in the .dist-info directories, so
+// asking Python for all of it at once costs one process instead of one per
+// fifty packages.
+func List(env environments.Env) ([]Package, error) {
+	out, err := env.Pip("list", "--format=json").Output()
+	if err != nil {
+		return nil, fmt.Errorf("pip list failed in %s: %s", env.Label, failureReason(out, err))
+	}
+
+	var entries []listEntry
+	if err := json.Unmarshal(out, &entries); err != nil {
+		return nil, fmt.Errorf("could not parse pip list output from %s: %w", env.Label, err)
+	}
+
+	summaries := summaries(env)
+
+	packages := make([]Package, 0, len(entries))
+	for _, entry := range entries {
+		packages = append(packages, Package{
+			Name:    entry.Name,
+			Version: entry.Version,
+			Summary: summaries[normalise(entry.Name)],
+		})
+	}
+	sort.Slice(packages, func(i, j int) bool {
+		return strings.ToLower(packages[i].Name) < strings.ToLower(packages[j].Name)
+	})
+	return packages, nil
+}
+
+const summaryScript = `import json,importlib.metadata as m
+out={}
+for d in m.distributions():
+    try:
+        n=d.metadata["Name"]
+        if n and n not in out: out[n]=d.metadata.get("Summary","")
+    except Exception: pass
+print(json.dumps(out))`
+
+// summaries maps a normalised distribution name to its one-line description.
+// A failure is not worth reporting: the list is still useful without summaries.
+func summaries(env environments.Env) map[string]string {
+	out, err := env.Cmd("-c", summaryScript).Output()
+	if err != nil {
+		return map[string]string{}
+	}
+	var raw map[string]string
+	if json.Unmarshal(out, &raw) != nil {
+		return map[string]string{}
+	}
+	clean := make(map[string]string, len(raw))
+	for name, summary := range raw {
+		clean[normalise(name)] = strings.TrimSpace(summary)
+	}
+	return clean
+}
+
+// ListOutdated returns packages with a newer version available on PyPI. It is
+// the one call that needs the network, so it is fetched separately from List
+// and cached by the frontend.
+func ListOutdated(env environments.Env) ([]Outdated, error) {
+	out, err := env.Pip("list", "--outdated", "--format=json").Output()
+	if err != nil {
+		return nil, fmt.Errorf("pip list --outdated failed in %s: %s", env.Label, failureReason(out, err))
+	}
+	var entries []struct {
+		Name          string `json:"name"`
+		Version       string `json:"version"`
+		LatestVersion string `json:"latest_version"`
+	}
+	if err := json.Unmarshal(out, &entries); err != nil {
+		return nil, fmt.Errorf("could not parse outdated list from %s: %w", env.Label, err)
+	}
+
+	packages := make([]Outdated, len(entries))
+	var wg sync.WaitGroup
+	for i, entry := range entries {
+		packages[i] = Outdated{
+			Name:          entry.Name,
+			Version:       entry.Version,
+			LatestVersion: entry.LatestVersion,
+			BumpType:      classifyBump(entry.Version, entry.LatestVersion),
+		}
+		wg.Add(1)
+		go func(i int, name string) {
+			defer wg.Done()
+			packages[i].ChangelogURL = changelogURL(name)
+		}(i, entry.Name)
+	}
+	wg.Wait()
+	sort.Slice(packages, func(i, j int) bool {
+		return strings.ToLower(packages[i].Name) < strings.ToLower(packages[j].Name)
+	})
+	return packages, nil
+}
+
+// classifyBump names the size of a version jump so the UI can colour it.
+func classifyBump(current, latest string) string {
+	currentParts := strings.SplitN(current, ".", 3)
+	latestParts := strings.SplitN(latest, ".", 3)
+	if len(currentParts) > 0 && len(latestParts) > 0 && currentParts[0] != latestParts[0] {
+		return "major"
+	}
+	if len(currentParts) > 1 && len(latestParts) > 1 && currentParts[1] != latestParts[1] {
+		return "minor"
+	}
+	return "patch"
+}
+
+// Count is how many distributions the environment appears to hold.
+//
+// It counts *.dist-info directories instead of running `pip list`, because the
+// environments page wants a number for every environment on the machine, and
+// one pip process per environment is the difference between a list that appears
+// and a list that hangs. A venv built with --system-site-packages reports only
+// its own packages — a hint worth showing, not a claim to be right.
+func Count(env environments.Env) int {
+	total := 0
+	for _, dir := range sitePackagesDirs(env) {
+		matches, _ := filepath.Glob(filepath.Join(dir, "*.dist-info"))
+		total += len(matches)
+	}
+	return total
+}
+
+// sitePackagesDirs lists the places this environment's distributions can live.
+func sitePackagesDirs(env environments.Env) []string {
+	root := env.Root
+	if root == "" {
+		root = filepath.Dir(env.Python)
+		if env.IsVirtual() {
+			root = filepath.Dir(root)
+		}
+	}
+	var dirs []string
+	if runtime.GOOS == "windows" {
+		dirs = append(dirs, filepath.Join(root, "Lib", "site-packages"))
+	} else {
+		dirs = append(dirs, glob(filepath.Join(root, "lib", "python3*", "site-packages"))...)
+	}
+	// A base interpreter can also hold packages in a per-user site directory.
+	if !env.IsVirtual() {
+		if appData := os.Getenv("APPDATA"); appData != "" {
+			dirs = append(dirs, glob(filepath.Join(appData, "Python", "Python3*", "site-packages"))...)
+		}
+		if home, err := os.UserHomeDir(); err == nil {
+			dirs = append(dirs, glob(filepath.Join(home, ".local", "lib", "python3*", "site-packages"))...)
+		}
+	}
+	return existingDirs(dirs)
+}
+
+// ── describing an interpreter ────────────────────────────────────────────────
+
+const metaScript = `import json,sys,site
+print(json.dumps({
+ "v":"%d.%d.%d"%sys.version_info[:3],
+ "exe":sys.executable,
+ "prefix":sys.prefix,
+ "base":sys.base_prefix,
+ "site":list(site.getsitepackages())}))`
+
+// Info describes an environment in two processes instead of the four the
+// individual questions would take.
+func Info(env environments.Env) (EnvInfo, error) {
+	info := EnvInfo{PythonPath: env.Python, Virtual: env.IsVirtual()}
+
+	out, err := env.Cmd("-c", metaScript).CombinedOutput()
+	if err != nil {
+		return info, fmt.Errorf("could not run %s: %s", env.Python, failureReason(out, err))
+	}
+	var meta struct {
+		V      string   `json:"v"`
+		Exe    string   `json:"exe"`
+		Prefix string   `json:"prefix"`
+		Base   string   `json:"base"`
+		Site   []string `json:"site"`
+	}
+	if err := json.Unmarshal(out, &meta); err != nil {
+		return info, fmt.Errorf("could not parse interpreter details from %s: %w", env.Label, err)
+	}
+	info.PythonVersion = meta.V
+	info.PythonPath = meta.Exe
+	info.Prefix = meta.Prefix
+	info.BasePrefix = meta.Base
+	info.SitePackages = pickSitePackages(meta.Site)
+
+	if pipOut, err := env.Pip("--version").Output(); err == nil {
+		if fields := strings.Fields(string(pipOut)); len(fields) >= 2 {
+			info.PipVersion = fields[1]
+		}
+	}
+	return info, nil
+}
+
+// pickSitePackages chooses the directory distributions actually live in.
+//
+// `site.getsitepackages()` is not ordered the way the name suggests: under the
+// Python Install Manager it returns the prefix first and the real
+// site-packages second, so taking the first entry reports the interpreter's own
+// directory and looks like a bug in the count beside it.
+func pickSitePackages(candidates []string) string {
+	for _, dir := range candidates {
+		if filepath.Base(dir) == "site-packages" {
+			return dir
+		}
+	}
+	if len(candidates) > 0 {
+		return candidates[len(candidates)-1]
+	}
+	return ""
+}
+
+// ── changing what is installed ───────────────────────────────────────────────
+
+// Install installs spec. It may pin a version ("requests==2.32.0") or point at
+// a path or a URL, because pip accepts all of those and there is no reason for
+// the app to accept less.
+func Install(env environments.Env, spec string) error {
+	return runStreaming(env, "install", "install", spec)
+}
+
+// Upgrade upgrades one package to the newest version its metadata allows.
+func Upgrade(env environments.Env, name string) error {
+	return runStreaming(env, "upgrade", "install", "--upgrade", name)
+}
+
+// Uninstall removes a package and the files it owns.
+func Uninstall(env environments.Env, name string) error {
+	return runStreaming(env, "uninstall", "uninstall", "--yes", name)
+}
+
+// runStreaming runs a pip command, forwards every output line to the log, and
+// records the outcome in History.
+func runStreaming(env environments.Env, action string, args ...string) error {
+	target := nameFrom(args)
+	command := fmt.Sprintf("%s -m pip %s", env.Python, strings.Join(args, " "))
+	emitLog("INFO", fmt.Sprintf("[%s] pip %s", env.Label, strings.Join(args, " ")))
+
+	cmd := env.Pip(args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
 	cmd.Stderr = cmd.Stdout
 	if err := cmd.Start(); err != nil {
 		emitLog("ERR", err.Error())
+		appendHistory(newEntry(action, target, "", command, "failed"))
 		return err
 	}
+
 	scanner := bufio.NewScanner(stdout)
-	var outLines []string
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	var lines []string
 	for scanner.Scan() {
 		line := scanner.Text()
-		outLines = append(outLines, line)
+		lines = append(lines, line)
 		emitLog("STREAM", line)
 	}
-	err := cmd.Wait()
-	outStr := strings.Join(outLines, "\n")
-	if err != nil {
-		emitLog("ERR", "pip install failed: "+outStr)
-		appendHistory(newEntry("install", name, "", cmdStr, "failed"))
-		return fmt.Errorf("pip install failed: %s", outStr)
+	waitErr := cmd.Wait()
+	output := strings.Join(lines, "\n")
+
+	if waitErr != nil {
+		reason := lastNonEmptyLine(output)
+		emitLog("ERR", fmt.Sprintf("pip %s failed: %s", action, reason))
+		appendHistory(newEntry(action, target, "", command, "failed"))
+		return fmt.Errorf("pip %s failed: %s", action, reason)
 	}
-	// Extract installed version from output.
-	ver := extractInstalledVersion(outStr, name)
-	appendHistory(newEntry("install", name, ver, cmdStr, "success"))
+
+	appendHistory(newEntry(action, target, installedVersion(output, target), command, "success"))
 	return nil
 }
 
-// UninstallPackage removes a pip package by name.
-func UninstallPackage(name string) error {
-	cmdStr := "pip uninstall -y " + name
-	emitLog("INFO", "Running: "+cmdStr)
-	cmd := pip("uninstall", "-y", name)
-	stdout, _ := cmd.StdoutPipe()
-	cmd.Stderr = cmd.Stdout
-	if err := cmd.Start(); err != nil {
-		emitLog("ERR", err.Error())
-		return err
+// nameFrom is the package being acted on: the last argument that is not a flag.
+func nameFrom(args []string) string {
+	for i := len(args) - 1; i >= 0; i-- {
+		if !strings.HasPrefix(args[i], "-") {
+			return args[i]
+		}
 	}
-	scanner := bufio.NewScanner(stdout)
-	var outLines []string
-	for scanner.Scan() {
-		line := scanner.Text()
-		outLines = append(outLines, line)
-		emitLog("STREAM", line)
-	}
-	err := cmd.Wait()
-	outStr := strings.Join(outLines, "\n")
-	if err != nil {
-		emitLog("ERR", "pip uninstall failed: "+outStr)
-		appendHistory(newEntry("uninstall", name, "", cmdStr, "failed"))
-		return fmt.Errorf("pip uninstall failed: %s", outStr)
-	}
-	appendHistory(newEntry("uninstall", name, "", cmdStr, "success"))
-	return nil
+	return ""
 }
 
-// UpgradePackage upgrades a pip package to its latest version.
-func UpgradePackage(name string) error {
-	cmdStr := "pip install --upgrade " + name
-	emitLog("INFO", "Running: "+cmdStr)
-	cmd := pip("install", "--upgrade", name)
-	stdout, _ := cmd.StdoutPipe()
-	cmd.Stderr = cmd.Stdout
-	if err := cmd.Start(); err != nil {
-		emitLog("ERR", err.Error())
-		return err
-	}
-	scanner := bufio.NewScanner(stdout)
-	var outLines []string
-	for scanner.Scan() {
-		line := scanner.Text()
-		outLines = append(outLines, line)
-		emitLog("STREAM", line)
-	}
-	err := cmd.Wait()
-	outStr := strings.Join(outLines, "\n")
-	if err != nil {
-		emitLog("ERR", "pip upgrade failed: "+outStr)
-		appendHistory(newEntry("upgrade", name, "", cmdStr, "failed"))
-		return fmt.Errorf("pip upgrade failed: %s", outStr)
-	}
-	ver := extractInstalledVersion(outStr, name)
-	appendHistory(newEntry("upgrade", name, ver, cmdStr, "success"))
-	return nil
-}
-
-// extractInstalledVersion tries to parse "Successfully installed <name>-<ver>" from pip output.
-func extractInstalledVersion(output, name string) string {
-	prefix := "Successfully installed "
+// installedVersion reads "Successfully installed x-1.2.3" out of pip's output.
+func installedVersion(output, name string) string {
+	const marker = "Successfully installed "
+	lowerName := strings.ToLower(name)
 	for _, line := range strings.Split(output, "\n") {
-		if strings.HasPrefix(line, prefix) {
-			for _, tok := range strings.Fields(strings.TrimPrefix(line, prefix)) {
-				if strings.HasPrefix(strings.ToLower(tok), strings.ToLower(name)+"-") {
-					return strings.TrimPrefix(strings.ToLower(tok), strings.ToLower(name)+"-")
-				}
+		rest, ok := strings.CutPrefix(line, marker)
+		if !ok {
+			continue
+		}
+		for _, token := range strings.Fields(rest) {
+			if strings.HasPrefix(strings.ToLower(token), lowerName+"-") {
+				return token[len(name)+1:]
 			}
+		}
+	}
+	return ""
+}
+
+// ── PyPI metadata ────────────────────────────────────────────────────────────
+
+var httpClient = &http.Client{Timeout: 30 * time.Second}
+
+// changelogURL looks for a changelog link in a package's PyPI metadata so the
+// Updates page can offer "what changed" before an upgrade.
+func changelogURL(name string) string {
+	resp, err := httpClient.Get("https://pypi.org/pypi/" + name + "/json")
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+	var payload struct {
+		Info struct {
+			ProjectURLs map[string]string `json:"project_urls"`
+		} `json:"info"`
+	}
+	if json.NewDecoder(resp.Body).Decode(&payload) != nil {
+		return ""
+	}
+	for key, url := range payload.Info.ProjectURLs {
+		lower := strings.ToLower(key)
+		for _, word := range []string{"changelog", "change log", "changes", "release notes", "releases"} {
+			if strings.Contains(lower, word) {
+				return url
+			}
+		}
+	}
+	return ""
+}
+
+// ── small helpers ────────────────────────────────────────────────────────────
+
+// separatorRun matches the PEP 503 separator class, which is collapsed rather
+// than replaced one character at a time: "zope..if" is the project "zope-if",
+// not "zope--if".
+var separatorRun = regexp.MustCompile(`[-_.]+`)
+
+// normalise applies the PEP 503 name rules, so "PyYAML" and "pyyaml" collapse
+// to one key. It runs on both sides of every name comparison in this package,
+// so a mismatch here is a package that silently loses its summary.
+func normalise(s string) string {
+	return separatorRun.ReplaceAllString(strings.ToLower(s), "-")
+}
+
+func glob(pattern string) []string {
+	matches, _ := filepath.Glob(pattern)
+	return matches
+}
+
+func existingDirs(paths []string) []string {
+	kept := make([]string, 0, len(paths))
+	for _, path := range paths {
+		if fi, err := os.Stat(path); err == nil && fi.IsDir() {
+			kept = append(kept, path)
+		}
+	}
+	return kept
+}
+
+// failureReason prefers pip's own last line over Go's bare "exit status 1",
+// because pip says what went wrong and exit status 1 does not.
+func failureReason(output []byte, err error) string {
+	if reason := lastNonEmptyLine(string(output)); reason != "" {
+		return reason
+	}
+	return err.Error()
+}
+
+func lastNonEmptyLine(s string) string {
+	lines := strings.Split(s, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if line := strings.TrimSpace(lines[i]); line != "" {
+			return line
 		}
 	}
 	return ""
