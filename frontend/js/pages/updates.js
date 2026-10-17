@@ -3,7 +3,7 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { actionCell, busy, confirmDialog, empty, h, icon, loading, panel, replace, table, toast } from "../ui.js";
+import { actionCell, busy, confirmDialog, empty, h, icon, loading, panel, replace, setWorking, table, toast } from "../ui.js";
 
 export const meta = { eyebrow: "Active environment", title: "Updates" };
 
@@ -34,12 +34,11 @@ export async function render(ctx) {
   const list = await store.outdated(python, { force: false });
 
   const opsBanner = h("div", { class: "op-banner", hidden: true });
-  const rowActions = new Map();
+  const rowButtons = new Map();
   let upgradeAll = null;
 
   function paintOperations() {
     const running = store.runningOperations(python);
-    const working = store.operationNames(python);
     const busyNow = running.length > 0;
 
     if (busyNow) {
@@ -55,18 +54,18 @@ export async function render(ctx) {
       replace(opsBanner);
     }
 
-    for (const [key, cell] of rowActions) {
-      const slot = cell.querySelector(".cell-actions");
-      const spin = slot.querySelector(".spinner");
-      if (working.has(key)) {
-        if (!spin) slot.prepend(h("span", { class: "spinner" }));
-      } else if (spin) {
-        spin.remove();
-      }
-      for (const button of slot.querySelectorAll("button")) button.disabled = busyNow;
+    /* A batch names one package at a time, so the spinner walks down the rows
+       as each upgrade starts. */
+    for (const [key, button] of rowButtons) {
+      const op = running.find((item) => item.name && store.normalise(item.name) === key) || null;
+      setWorking(button, op?.kind === "upgrade");
+      button.disabled = busyNow;
     }
 
-    if (upgradeAll) upgradeAll.disabled = busyNow;
+    if (upgradeAll) {
+      setWorking(upgradeAll, running.some((op) => op.kind === "upgrade" && op.total > 1));
+      upgradeAll.disabled = busyNow;
+    }
   }
 
   function mounted(node) {
@@ -89,6 +88,18 @@ export async function render(ctx) {
   }
 
   const rows = list.map((item) => {
+    const upgradeButton = h(
+      "button",
+      {
+        class: "btn btn-sm btn-ghost btn-primary",
+        type: "button",
+        onclick: () =>
+          store.start(() => api.upgrade(python, item.name), { kind: "upgrade", env: python, name: item.name }),
+      },
+      icon("arrow_upward", 13),
+      "Upgrade",
+    );
+
     const row = h(
       "tr",
       {},
@@ -118,21 +129,11 @@ export async function render(ctx) {
               icon("link", 13),
             )
           : null,
-        h(
-          "button",
-          {
-            class: "btn btn-sm btn-ghost btn-primary",
-            type: "button",
-            onclick: (event) =>
-              busy(event.currentTarget, () => store.start(() => api.upgrade(python, item.name))),
-          },
-          icon("arrow_upward", 13),
-          "Upgrade",
-        ),
+        upgradeButton,
       ),
     );
 
-    rowActions.set(store.normalise(item.name), row.lastElementChild);
+    rowButtons.set(store.normalise(item.name), upgradeButton);
     return row;
   });
 
@@ -183,17 +184,22 @@ function updateAllButton(ctx, list) {
     {
       class: "btn btn-primary btn-sm",
       type: "button",
-      onclick: (event) =>
-        busy(event.currentTarget, async () => {
-          const yes = await confirmDialog({
-            title: `Upgrade ${list.length} package${list.length === 1 ? "" : "s"}?`,
-            text: `${ctx.env.label} is updated one package at a time. A major bump can break things.`,
-            confirm: "Upgrade all",
-          });
-          if (!yes) return;
+      onclick: async () => {
+        const yes = await confirmDialog({
+          title: `Upgrade ${list.length} package${list.length === 1 ? "" : "s"}?`,
+          text: `${ctx.env.label} is updated one package at a time. A major bump can break things.`,
+          confirm: "Upgrade all",
+        });
+        if (!yes) return;
 
-          await store.start(() => api.upgradeMany(ctx.env.python, list.map((item) => item.name)));
-        }),
+        await store.start(() => api.upgradeMany(ctx.env.python, list.map((item) => item.name)), {
+          kind: "upgrade",
+          env: ctx.env.python,
+          name: list[0].name,
+          target: `${list.length} packages`,
+          total: list.length,
+        });
+      },
     },
     "Upgrade all",
   );

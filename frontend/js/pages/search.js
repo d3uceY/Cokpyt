@@ -5,7 +5,7 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { actionCell, busy, empty, h, icon, loading, panel, replace, toast } from "../ui.js";
+import { actionCell, empty, h, icon, loading, panel, replace, setWorking, toast } from "../ui.js";
 
 const DEBOUNCE_MS = 300;
 
@@ -28,7 +28,7 @@ let results = null;
 export async function render(ctx) {
   const body = h("div", {});
   const opsBanner = h("div", { class: "op-banner", hidden: true });
-  let installButtons = [];
+  let installButtons = new Map();
 
   const input = h("input", {
     class: "input",
@@ -98,7 +98,13 @@ export async function render(ctx) {
       replace(opsBanner);
     }
 
-    for (const button of installButtons) button.disabled = busyNow;
+    const installs = new Set(
+      running.filter((op) => op.kind === "install" && op.name).map((op) => store.normalise(op.name)),
+    );
+    for (const [name, button] of installButtons) {
+      setWorking(button, installs.has(name));
+      button.disabled = busyNow;
+    }
   }
 
   function installButton(result, installed) {
@@ -107,19 +113,22 @@ export async function render(ctx) {
       {
         class: "btn btn-sm btn-ghost btn-primary",
         type: "button",
-        disabled: store.runningOperations(ctx.env.python).length > 0,
-        onclick: (event) =>
-          busy(event.currentTarget, () => store.start(() => api.install(ctx.env.python, result.name))),
+        onclick: () =>
+          store.start(() => api.install(ctx.env.python, result.name), {
+            kind: "install",
+            env: ctx.env.python,
+            name: result.name,
+          }),
       },
       icon(installed ? "refresh" : "download", 13),
       installed ? "Reinstall" : "Install",
     );
-    installButtons.push(button);
+    installButtons.set(store.normalise(result.name), button);
     return button;
   }
 
   function show() {
-    installButtons = [];
+    installButtons = new Map();
     if (!query.trim()) {
       replace(
         body,

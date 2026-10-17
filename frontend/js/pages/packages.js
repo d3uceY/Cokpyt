@@ -9,7 +9,6 @@ import { api } from "../api.js";
 import * as store from "../store.js";
 import {
   actionCell,
-  busy,
   chooseDialog,
   confirmDialog,
   h,
@@ -17,12 +16,14 @@ import {
   panel,
   promptDialog,
   replace,
+  setWorking,
   toast,
 } from "../ui.js";
 
 const RENDER_LIMIT = 400;
 
 let unsubscribe = null;
+let installButton = null;
 
 export function cleanup() {
   if (unsubscribe) unsubscribe();
@@ -32,14 +33,13 @@ export function cleanup() {
 export const meta = { eyebrow: "Active environment", title: "Packages" };
 
 export function actions(ctx) {
-  return [
-    h(
-      "button",
-      { class: "btn btn-primary", type: "button", onclick: (event) => busy(event.currentTarget, () => install(ctx)) },
-      icon("add", 14),
-      "Install",
-    ),
-  ];
+  installButton = h(
+    "button",
+    { class: "btn btn-primary", type: "button", onclick: () => install(ctx) },
+    icon("add", 14),
+    "Install",
+  );
+  return [installButton];
 }
 
 async function install(ctx) {
@@ -50,7 +50,11 @@ async function install(ctx) {
   });
   if (!spec) return;
 
-  await store.start(() => api.install(ctx.env.python, spec));
+  await store.start(() => api.install(ctx.env.python, spec), {
+    kind: "install",
+    env: ctx.env.python,
+    name: spec,
+  });
 }
 
 export async function render(ctx) {
@@ -61,7 +65,7 @@ export async function render(ctx) {
 
   const selection = new Set();
   const latestCells = new Map();
-  const rowActions = new Map();
+  const rowButtons = new Map();
   const outdated = store.outdatedMap(python);
 
   const opsBanner = h("div", { class: "op-banner", hidden: true });
@@ -116,7 +120,7 @@ export async function render(ctx) {
     class: "btn btn-sm btn-danger",
     type: "button",
     hidden: true,
-    onclick: (event) => busy(event.currentTarget, () => bulkUninstall(ctx, selection, paintSelection)),
+    onclick: () => bulkUninstall(ctx, selection, paintSelection),
   });
 
   const toolbar = h(
@@ -153,6 +157,52 @@ export async function render(ctx) {
     });
     checkbox.dataset.package = pkg.name;
 
+    const upgradeButton = h(
+      "button",
+      {
+        class: "btn btn-sm btn-ghost",
+        type: "button",
+        onclick: () =>
+          store.start(() => api.upgrade(python, pkg.name), { kind: "upgrade", env: python, name: pkg.name }),
+      },
+      icon("arrow_upward", 13),
+      "Upgrade",
+    );
+    const versionsButton = h(
+      "button",
+      {
+        class: "btn btn-sm btn-ghost",
+        type: "button",
+        title: `Install a different version of ${pkg.name}`,
+        onclick: () => chooseVersion(ctx, pkg),
+      },
+      icon("history", 13),
+      "Versions",
+    );
+    const uninstallButton = h(
+      "button",
+      {
+        class: "btn btn-sm btn-ghost",
+        type: "button",
+        onclick: async () => {
+          const yes = await confirmDialog({
+            title: `Uninstall ${pkg.name}?`,
+            text: `${pkg.version} will be removed from ${ctx.env.label}. Anything depending on it will break.`,
+            confirm: "Uninstall",
+            danger: true,
+          });
+          if (!yes) return;
+          await store.start(() => api.uninstall(python, pkg.name), {
+            kind: "uninstall",
+            env: python,
+            name: pkg.name,
+          });
+        },
+      },
+      icon("delete", 13),
+      "Uninstall",
+    );
+
     const row = h(
       "tr",
       { dataset: { search: `${pkg.name} ${pkg.summary || ""}`.toLowerCase() } },
@@ -176,52 +226,10 @@ export async function render(ctx) {
       ),
       h("td", { class: "mono cell-num", dataset: { label: "Installed" }, text: pkg.version }),
       h("td", { class: "cell-num", dataset: { label: "Latest" } }, latest),
-      actionCell(
-        h(
-          "button",
-          {
-            class: "btn btn-sm btn-ghost",
-            type: "button",
-            onclick: (event) => busy(event.currentTarget, () => store.start(() => api.upgrade(python, pkg.name))),
-          },
-          icon("arrow_upward", 13),
-          "Upgrade",
-        ),
-        h(
-          "button",
-          {
-            class: "btn btn-sm btn-ghost",
-            type: "button",
-            title: `Install a different version of ${pkg.name}`,
-            onclick: (event) => busy(event.currentTarget, () => chooseVersion(ctx, pkg)),
-          },
-          icon("history", 13),
-          "Versions",
-        ),
-        h(
-          "button",
-          {
-            class: "btn btn-sm btn-ghost",
-            type: "button",
-            onclick: (event) =>
-              busy(event.currentTarget, async () => {
-                const yes = await confirmDialog({
-                  title: `Uninstall ${pkg.name}?`,
-                  text: `${pkg.version} will be removed from ${ctx.env.label}. Anything depending on it will break.`,
-                  confirm: "Uninstall",
-                  danger: true,
-                });
-                if (!yes) return;
-                await store.start(() => api.uninstall(python, pkg.name));
-              }),
-          },
-          icon("delete", 13),
-          "Uninstall",
-        ),
-      ),
+      actionCell(upgradeButton, versionsButton, uninstallButton),
     );
 
-    rowActions.set(store.normalise(pkg.name), row.lastElementChild);
+    rowButtons.set(store.normalise(pkg.name), { upgradeButton, versionsButton, uninstallButton });
     return row;
   });
 
@@ -244,7 +252,6 @@ export async function render(ctx) {
 
   function paintOperations() {
     const running = store.runningOperations(python);
-    const working = store.operationNames(python);
     const busyNow = running.length > 0;
 
     if (busyNow) {
@@ -260,17 +267,20 @@ export async function render(ctx) {
       replace(opsBanner);
     }
 
-    for (const [key, cell] of rowActions) {
-      const slot = cell.querySelector(".cell-actions");
-      const spin = slot.querySelector(".spinner");
-      if (working.has(key)) {
-        if (!spin) slot.prepend(h("span", { class: "spinner" }));
-      } else if (spin) {
-        spin.remove();
-      }
-      for (const button of slot.querySelectorAll("button")) button.disabled = busyNow;
+    /* The row whose package is being changed wears the spinner on the button
+       that would start that work again. A version picked from a row's list is
+       that row's work; the page's Install button is for a requirement typed
+       into its prompt. */
+    for (const [key, buttons] of rowButtons) {
+      const op = running.find((item) => item.name && store.normalise(item.name) === key) || null;
+      setWorking(buttons.upgradeButton, op?.kind === "upgrade");
+      setWorking(buttons.uninstallButton, op?.kind === "uninstall");
+      setWorking(buttons.versionsButton, op?.kind === "install" && op.target !== op.name);
+      for (const button of Object.values(buttons)) button.disabled = busyNow;
     }
 
+    const installs = running.filter((op) => op.kind === "install");
+    setWorking(installButton, installs.some((op) => !op.name || op.target === op.name));
     bulkButton.disabled = busyNow;
   }
 
@@ -365,7 +375,12 @@ async function chooseVersion(ctx, pkg) {
   });
   if (!version || version === pkg.version) return;
 
-  await store.start(() => api.installVersion(ctx.env.python, pkg.name, version));
+  await store.start(() => api.installVersion(ctx.env.python, pkg.name, version), {
+    kind: "install",
+    env: ctx.env.python,
+    name: pkg.name,
+    target: `${pkg.name} ${version}`,
+  });
 }
 
 async function bulkUninstall(ctx, selection, paintSelection) {
@@ -380,7 +395,13 @@ async function bulkUninstall(ctx, selection, paintSelection) {
   });
   if (!yes) return;
 
-  await store.start(() => api.uninstallMany(ctx.env.python, names));
+  await store.start(() => api.uninstallMany(ctx.env.python, names), {
+    kind: "uninstall",
+    env: ctx.env.python,
+    name: names[0],
+    target: names.length === 1 ? names[0] : `${names.length} packages`,
+    total: names.length,
+  });
 
   selection.clear();
   paintSelection();

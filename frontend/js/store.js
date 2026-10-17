@@ -17,6 +17,7 @@ export const state = {
   notes: [],
   counts: {},
   operations: [],
+  pending: [],
   scanned: false,
   scanning: false,
 };
@@ -106,17 +107,28 @@ export async function selectEnvironment(python) {
 
 export async function refreshOperations() {
   state.operations = (await api.operations()) || [];
+  settlePending();
   announce();
   return state.operations;
 }
 
 export function applyOperations(list) {
   state.operations = Array.isArray(list) ? list : [];
+  settlePending();
   announce();
 }
 
+function settlePending() {
+  if (state.pending.length === 0) return;
+  state.pending = state.pending.filter(
+    (entry) => !state.operations.some((op) => op.running && op.env === entry.env),
+  );
+}
+
 export function runningOperations(python) {
-  return state.operations.filter((op) => op.running && (!python || op.env === python));
+  return [...state.pending, ...state.operations].filter(
+    (op) => op.running && (!python || op.env === python),
+  );
 }
 
 const VERBS = {
@@ -131,14 +143,6 @@ export function describeOperation(op) {
   const what = op.name || op.target || "packages";
   const steps = op.total > 1 ? ` · ${Math.min(op.done, op.total)}/${op.total}` : "";
   return `${verb} ${what}${steps}`;
-}
-
-export function operationNames(python) {
-  const names = new Set();
-  for (const op of runningOperations(python)) {
-    if (op.name) names.add(normalise(op.name));
-  }
-  return names;
 }
 
 export async function packageCounts() {
@@ -188,14 +192,36 @@ export function invalidate(python) {
   cache.history = null;
 }
 
-export async function start(work) {
+let pendingSeq = 0;
+
+export async function start(work, op = {}) {
+  const entry = {
+    id: `pending${(pendingSeq += 1)}`,
+    kind: op.kind || "install",
+    env: op.env || state.active,
+    target: op.target || op.name || "",
+    name: op.name || "",
+    total: op.total || 1,
+    done: 1,
+    running: true,
+    failed: false,
+    message: "",
+    failures: [],
+    started: Date.now(),
+    ended: 0,
+    pending: true,
+  };
+
+  state.pending.push(entry);
+  announce();
+
   try {
     await work();
   } catch (error) {
+    state.pending = state.pending.filter((item) => item !== entry);
+    announce();
     toast(error.message, "danger");
   }
-
-  setTimeout(announce, 0);
 }
 
 export async function history({ force = false } = {}) {

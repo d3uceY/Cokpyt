@@ -5,7 +5,7 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { busy, confirmDialog, formatBytes, h, icon, loading, panel, plural, replace } from "../ui.js";
+import { confirmDialog, formatBytes, h, icon, loading, panel, plural, replace, setWorking } from "../ui.js";
 
 export const meta = {
   eyebrow: "Active environment",
@@ -55,6 +55,7 @@ export async function render(ctx) {
       replace(opsBanner);
     }
 
+    setWorking(runButton, running.some((op) => op.kind === "cleanup"));
     runButton.disabled = selectedBytes === 0 || busyNow;
   }
 
@@ -66,21 +67,23 @@ export async function render(ctx) {
     paintOperations();
   }
 
-  runButton.addEventListener("click", (event) =>
-    busy(event.currentTarget, async () => {
-      const bytes = categories.filter((c) => selected.has(c.kind)).reduce((sum, c) => sum + c.size, 0);
-      const yes = await confirmDialog({
-        title: "Run cleanup?",
-        text: `${formatBytes(bytes)} will be freed from ${ctx.env.label}. Deleted caches are re-downloaded when needed.`,
-        confirm: "Clean up",
-        danger: true,
-      });
-      if (!yes) return;
+  runButton.addEventListener("click", async () => {
+    const bytes = categories.filter((c) => selected.has(c.kind)).reduce((sum, c) => sum + c.size, 0);
+    const yes = await confirmDialog({
+      title: "Run cleanup?",
+      text: `${formatBytes(bytes)} will be freed from ${ctx.env.label}. Deleted caches are re-downloaded when needed.`,
+      confirm: "Clean up",
+      danger: true,
+    });
+    if (!yes) return;
 
-      const kinds = [...selected];
-      await store.start(() => api.cleanupRun(python, kinds));
-    }),
-  );
+    const kinds = [...selected];
+    await store.start(() => api.cleanupRun(python, kinds), {
+      kind: "cleanup",
+      env: python,
+      target: "pip leftovers",
+    });
+  });
 
   const rows = categories.map((category) =>
     h(

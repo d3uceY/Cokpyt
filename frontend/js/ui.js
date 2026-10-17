@@ -464,23 +464,38 @@ export function chooseDialog({ title, label, load, confirm = "OK" }) {
   });
 }
 
+const workingButtons = new WeakMap();
+
+export function setWorking(button, on) {
+  if (!button) return;
+
+  if (on) {
+    if (workingButtons.has(button)) return;
+    const width = button.offsetWidth;
+    workingButtons.set(button, [...button.childNodes]);
+    button.disabled = true;
+    button.classList.add("is-busy");
+    button.style.minWidth = `${width}px`;
+    replace(button, h("span", { class: "spinner" }));
+    return;
+  }
+
+  const restore = workingButtons.get(button);
+  if (!restore) return;
+  workingButtons.delete(button);
+  replace(button, restore);
+  button.classList.remove("is-busy");
+  button.style.minWidth = "";
+  button.disabled = false;
+}
+
 export async function busy(element, work) {
   if (!element || element.disabled) return undefined;
 
-  const restore = [...element.childNodes];
-  const width = element.offsetWidth;
-
-  element.disabled = true;
-  element.classList.add("is-busy");
-  element.style.minWidth = `${width}px`;
-  replace(element, h("span", { class: "spinner" }));
-
+  setWorking(element, true);
   try {
     return await work();
   } finally {
-    replace(element, restore);
-    element.classList.remove("is-busy");
-    element.style.minWidth = "";
-    element.disabled = false;
+    setWorking(element, false);
   }
 }
