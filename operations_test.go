@@ -11,7 +11,7 @@ import (
 func TestOpLogRecordsTheLifecycle(t *testing.T) {
 	log := newOpLog()
 
-	id, err := log.begin("install", "python.exe", "requests", 1)
+	id, err := log.begin("client-1", "install", "python.exe", "requests", 1)
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
@@ -21,6 +21,9 @@ func TestOpLogRecordsTheLifecycle(t *testing.T) {
 		t.Fatalf("list = %d operations, want 1", len(ops))
 	}
 	op := ops[0]
+	if op.ID != "client-1" {
+		t.Errorf("ID = %q, want the id the caller chose", op.ID)
+	}
 	if !op.Running || op.Kind != "install" || op.Env != "python.exe" || op.Target != "requests" {
 		t.Errorf("started operation = %+v", op)
 	}
@@ -43,11 +46,11 @@ func TestOpLogRecordsTheLifecycle(t *testing.T) {
 func TestOpLogRefusesASecondRunInOneEnvironment(t *testing.T) {
 	log := newOpLog()
 
-	if _, err := log.begin("install", "one", "requests", 1); err != nil {
+	if _, err := log.begin("a", "install", "one", "requests", 1); err != nil {
 		t.Fatalf("first begin: %v", err)
 	}
 
-	_, err := log.begin("upgrade", "one", "flask", 1)
+	_, err := log.begin("b", "upgrade", "one", "flask", 1)
 	if err == nil {
 		t.Fatal("a second operation in the same environment should be refused")
 	}
@@ -55,7 +58,7 @@ func TestOpLogRefusesASecondRunInOneEnvironment(t *testing.T) {
 		t.Errorf("refusal %q should name the operation that holds the environment", err)
 	}
 
-	if _, err := log.begin("upgrade", "two", "flask", 1); err != nil {
+	if _, err := log.begin("c", "upgrade", "two", "flask", 1); err != nil {
 		t.Errorf("a different environment should be allowed: %v", err)
 	}
 }
@@ -63,7 +66,7 @@ func TestOpLogRefusesASecondRunInOneEnvironment(t *testing.T) {
 func TestOpLogReportsWhyARunFailed(t *testing.T) {
 	log := newOpLog()
 
-	id, err := log.begin("uninstall", "one", "numpy", 1)
+	id, err := log.begin("d", "uninstall", "one", "numpy", 1)
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
@@ -81,7 +84,7 @@ func TestOpLogReportsWhyARunFailed(t *testing.T) {
 func TestOpLogAdvancesThroughABatch(t *testing.T) {
 	log := newOpLog()
 
-	id, err := log.begin("upgrade", "one", "3 packages", 3)
+	id, err := log.begin("e", "upgrade", "one", "3 packages", 3)
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
@@ -105,13 +108,13 @@ func TestOpLogBroadcastsNewestFirst(t *testing.T) {
 	var broadcasts int
 	log.changed = func([]Op) { broadcasts++ }
 
-	first, err := log.begin("install", "one", "requests", 1)
+	first, err := log.begin("f", "install", "one", "requests", 1)
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
 	log.finish(first, nil)
 
-	second, err := log.begin("install", "two", "flask", 1)
+	second, err := log.begin("g", "install", "two", "flask", 1)
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
@@ -132,7 +135,7 @@ func TestOpLogKeepsOnlyTheRecentTail(t *testing.T) {
 	log := newOpLog()
 
 	for i := 0; i < opsKept+5; i++ {
-		id, err := log.begin("install", "same", "x", 1)
+		id, err := log.begin("", "install", "same", "x", 1)
 		if err != nil {
 			t.Fatalf("begin %d: %v", i, err)
 		}
@@ -153,7 +156,7 @@ func TestOperationsBindingWorksWithoutAnApplication(t *testing.T) {
 
 	// A record started on a test App must not panic on the application it does
 	// not have; emit is nil-safe, and this is the path that proves it.
-	run, err := app.beginOp("install", "one", "requests", 1)
+	run, err := app.beginOp("", "install", "one", "requests", 1)
 	if err != nil {
 		t.Fatalf("beginOp: %v", err)
 	}
@@ -223,7 +226,7 @@ func TestRunReturnsBeforeTheWorkDoesAndCompletesByEvent(t *testing.T) {
 	events := recordEvents(app)
 
 	release := make(chan struct{})
-	if err := app.run("install", "one", "requests", 1, func(run *opRun) error {
+	if err := app.run("client-run", "install", "one", "requests", 1, func(run *opRun) error {
 		run.step("requests")
 		<-release
 		return nil
@@ -241,7 +244,7 @@ func TestRunReturnsBeforeTheWorkDoesAndCompletesByEvent(t *testing.T) {
 	if op.Running || op.Failed || op.Done != op.Total {
 		t.Errorf("op:done = %+v, want a finished, successful operation", op)
 	}
-	if op.ID == "" || op.Kind != "install" || op.Env != "one" || op.Name != "requests" {
+	if op.ID != "client-run" || op.Kind != "install" || op.Env != "one" || op.Name != "requests" {
 		t.Errorf("op:done lost the operation's identity: %+v", op)
 	}
 	if op.Ended == 0 {
@@ -253,7 +256,7 @@ func TestRunReportsAFailureInTheCompletionEvent(t *testing.T) {
 	app := &App{}
 	events := recordEvents(app)
 
-	if err := app.run("uninstall", "one", "numpy", 1, func(run *opRun) error {
+	if err := app.run("", "uninstall", "one", "numpy", 1, func(run *opRun) error {
 		run.step("numpy")
 		return errors.New("pip uninstall failed: No such package")
 	}); err != nil {
@@ -274,7 +277,7 @@ func TestRunRefusesASecondOperationInTheSameEnvironment(t *testing.T) {
 	events := recordEvents(app)
 
 	release := make(chan struct{})
-	if err := app.run("install", "one", "requests", 1, func(*opRun) error {
+	if err := app.run("first", "install", "one", "requests", 1, func(*opRun) error {
 		<-release
 		return nil
 	}); err != nil {
@@ -282,7 +285,7 @@ func TestRunRefusesASecondOperationInTheSameEnvironment(t *testing.T) {
 	}
 
 	// The refusal is the only thing that still returns through the binding.
-	if err := app.run("upgrade", "one", "flask", 1, func(*opRun) error { return nil }); err == nil {
+	if err := app.run("second", "upgrade", "one", "flask", 1, func(*opRun) error { return nil }); err == nil {
 		t.Fatal("a second run in the same environment should be refused")
 	}
 
@@ -298,7 +301,7 @@ func TestBatchFailuresRideOnTheCompletionEvent(t *testing.T) {
 	app := &App{}
 	events := recordEvents(app)
 
-	if err := app.runBatch("upgrade", "one", []string{"requests", "flask"}, func(name string) error {
+	if err := app.runBatch("batch", "upgrade", "one", []string{"requests", "flask"}, func(name string) error {
 		if name == "flask" {
 			return errors.New("pip upgrade failed: no matching distribution")
 		}

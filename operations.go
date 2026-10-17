@@ -48,25 +48,35 @@ type opLog struct {
 
 func newOpLog() *opLog { return &opLog{ops: make(map[string]*Op)} }
 
-// begin registers an operation. A second one for the same environment is
-// refused: pip writes to one site-packages tree at a time, and two runs
-// racing there fail in ways that look like a broken install.
-func (l *opLog) begin(kind, env, target string, total int) (string, error) {
+// begin registers an operation under the id the frontend chose for it, so the
+// optimistic copy a page draws and the record that replaces it are the same
+// thing. A second operation for the same environment is refused: pip writes to
+// one site-packages tree at a time, and two runs racing there fail in ways that
+// look like a broken install.
+func (l *opLog) begin(id, kind, env, target string, total int) (string, error) {
 	if total < 1 {
 		total = 1
 	}
 
 	l.mu.Lock()
-	for _, id := range l.order {
-		if op := l.ops[id]; op.Running && op.Env == env {
+	for _, order := range l.order {
+		if op := l.ops[order]; op.Running && op.Env == env {
 			blocking := op.Kind
 			l.mu.Unlock()
 			return "", fmt.Errorf("another operation (%s) is still running in this environment", blocking)
 		}
 	}
 
-	l.seq++
-	id := fmt.Sprintf("op%d", l.seq)
+	if id == "" {
+		l.seq++
+		id = fmt.Sprintf("op%d", l.seq)
+	}
+	if _, taken := l.ops[id]; taken {
+		/* The frontend makes unique ids; a duplicate means one was reused, and
+		   two records sharing an id could not be told apart afterwards. */
+		id = fmt.Sprintf("%s-%d", id, time.Now().UnixNano())
+	}
+
 	l.ops[id] = &Op{
 		ID:      id,
 		Kind:    kind,
@@ -200,8 +210,8 @@ func (a *App) operationsLog() *opLog {
 // binding: a pip run outlives the call that started it, and the page that made
 // the call may be gone by the time pip is. Only a refusal to start (an unknown
 // interpreter, an environment that is already busy) comes back here.
-func (a *App) run(kind, env, target string, total int, work func(*opRun) error) error {
-	run, err := a.beginOp(kind, env, target, total)
+func (a *App) run(id, kind, env, target string, total int, work func(*opRun) error) error {
+	run, err := a.beginOp(id, kind, env, target, total)
 	if err != nil {
 		return err
 	}
@@ -214,8 +224,8 @@ func (a *App) run(kind, env, target string, total int, work func(*opRun) error) 
 // runBatch starts one operation that walks several packages. A package that
 // fails does not abandon the rest of the batch; the failures travel with the
 // finished operation, because there is no return value to carry them.
-func (a *App) runBatch(kind, env string, names []string, work func(string) error) error {
-	return a.run(kind, env, batchLabel(names), len(names), func(run *opRun) error {
+func (a *App) runBatch(id, kind, env string, names []string, work func(string) error) error {
+	return a.run(id, kind, env, batchLabel(names), len(names), func(run *opRun) error {
 		for _, name := range names {
 			run.step(name)
 			if err := work(name); err != nil {
@@ -247,9 +257,9 @@ func (r *opRun) end(err error) error {
 
 // beginOp starts the record for a mutating call. The environment is the
 // resolved interpreter path, not what the caller passed in.
-func (a *App) beginOp(kind, env, target string, total int) (*opRun, error) {
+func (a *App) beginOp(id, kind, env, target string, total int) (*opRun, error) {
 	log := a.operationsLog()
-	id, err := log.begin(kind, env, target, total)
+	id, err := log.begin(id, kind, env, target, total)
 	if err != nil {
 		return nil, err
 	}

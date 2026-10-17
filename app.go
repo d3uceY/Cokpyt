@@ -247,52 +247,52 @@ func (a *App) Versions(python, name string) ([]string, error) {
 	return pip.Versions(env, strings.TrimSpace(name))
 }
 
-// Install installs a requirement into an environment. The call returns once pip
-// has been started; success or failure arrives as an op:done event.
-func (a *App) Install(python, spec string) error {
+// Install installs a requirement into an environment. The call returns once pip has been started; success or failure arrives as an op:done event. id is the
+// frontend's name for the run, so its optimistic record and this one are the same operation.
+func (a *App) Install(id, python, spec string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
 	spec = strings.TrimSpace(spec)
-	return a.run("install", env.Python, spec, 1, func(run *opRun) error {
+	return a.run(id, "install", env.Python, spec, 1, func(run *opRun) error {
 		run.step(spec)
 		return pip.Install(env, spec)
 	})
 }
 
 // InstallVersion pins a package to one exact version.
-func (a *App) InstallVersion(python, name, version string) error {
+func (a *App) InstallVersion(id, python, name, version string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
 	name, version = strings.TrimSpace(name), strings.TrimSpace(version)
-	return a.run("install", env.Python, name+" "+version, 1, func(run *opRun) error {
+	return a.run(id, "install", env.Python, name+" "+version, 1, func(run *opRun) error {
 		run.step(name)
 		return pip.InstallVersion(env, name, version)
 	})
 }
 
 // Upgrade upgrades one package.
-func (a *App) Upgrade(python, name string) error {
+func (a *App) Upgrade(id, python, name string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
-	return a.run("upgrade", env.Python, name, 1, func(run *opRun) error {
+	return a.run(id, "upgrade", env.Python, name, 1, func(run *opRun) error {
 		run.step(name)
 		return pip.Upgrade(env, name)
 	})
 }
 
 // Uninstall removes one package.
-func (a *App) Uninstall(python, name string) error {
+func (a *App) Uninstall(id, python, name string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
-	return a.run("uninstall", env.Python, name, 1, func(run *opRun) error {
+	return a.run(id, "uninstall", env.Python, name, 1, func(run *opRun) error {
 		run.step(name)
 		return pip.Uninstall(env, name)
 	})
@@ -300,22 +300,22 @@ func (a *App) Uninstall(python, name string) error {
 
 // UpgradeMany upgrades several packages. One failure does not abandon the rest;
 // the packages that failed are named on the op:done event.
-func (a *App) UpgradeMany(python string, names []string) error {
+func (a *App) UpgradeMany(id, python string, names []string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
-	return a.runBatch("upgrade", env.Python, names, func(name string) error { return pip.Upgrade(env, name) })
+	return a.runBatch(id, "upgrade", env.Python, names, func(name string) error { return pip.Upgrade(env, name) })
 }
 
 // UninstallMany removes several packages. Failures are named on the op:done
 // event, like UpgradeMany.
-func (a *App) UninstallMany(python string, names []string) error {
+func (a *App) UninstallMany(id, python string, names []string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
-	return a.runBatch("uninstall", env.Python, names, func(name string) error { return pip.Uninstall(env, name) })
+	return a.runBatch(id, "uninstall", env.Python, names, func(name string) error { return pip.Uninstall(env, name) })
 }
 
 // batchLabel names a multi-package run for the banner that reports it.
@@ -349,12 +349,12 @@ func (a *App) CleanupScan(python string) ([]pip.Reclaim, error) {
 
 // CleanupRun removes the requested categories. Like the package calls, it
 // returns when the work starts and reports the outcome as an op:done event.
-func (a *App) CleanupRun(python string, kinds []string) error {
+func (a *App) CleanupRun(id, python string, kinds []string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
-	return a.run("cleanup", env.Python, "pip leftovers", 1, func(*opRun) error {
+	return a.run(id, "cleanup", env.Python, "pip leftovers", 1, func(*opRun) error {
 		return pip.Cleanup(env, kinds)
 	})
 }
