@@ -337,6 +337,16 @@ html[data-theme="dark"] .navbar__items--right button[class*="toggle"] {
   margin-bottom: 4px;
 }
 
+/* A plain page that follows a category is not part of it. */
+.theme-doc-sidebar-menu
+  > .menu__list
+  > .menu__list-item:has(.menu__list-item-collapsible)
+  + .menu__list-item {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
 .menu__link {
   padding: 6px 9px;
   border-radius: var(--radius);
