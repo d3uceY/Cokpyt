@@ -1,77 +1,59 @@
-﻿---
+---
 sidebar_position: 2
 ---
 
 # Installation
 
-Cokpyt ships as a self-contained native binary and as a companion `pip` package. Use the binary; the `pip` package is buggy.
+Cokpyt ships as a self-contained binary. The PyPI package launches the same app but is experimental — use the binary.
 
----
-
-## Download a Pre-Built Binary
+## Download
 
 | Platform | Download |
-|----------|----------|
-| **Windows** (x64) | [Download Windows Installer](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-windows-installer.exe) |
-| **macOS** (Universal) | [Download macOS .zip](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-macos-amd64.zip) |
-| **Linux** (x64) | [Download Linux binary](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-linux-amd64) |
+|---|---|
+| **Windows** (x64) | [Installer](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-windows-installer.exe) |
+| **macOS** (universal) | [.zip](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-macos-amd64.zip) |
+| **Linux** (x64) | [Binary](https://github.com/d3uceY/Cokpyt/releases/latest/download/Cokpyt-linux-amd64) |
 
-Browse older versions on the [Releases page](https://github.com/d3uceY/Cokpyt/releases).
+Older versions are on the [releases page](https://github.com/d3uceY/Cokpyt/releases).
 
 ### Windows
 
-Run the `.exe` installer. No other dependencies — the Go runtime is compiled in.
+Run the installer. Nothing else to install — the Go runtime is compiled in.
 
 ### macOS
 
-Unzip and move `Cokpyt.app` to **Applications**. On first launch, right-click → **Open** to bypass Gatekeeper (the binary is unsigned).
+Unzip, then move `Cokpyt.app` to **Applications**. On first launch, right-click → **Open**: the build is unsigned, so Gatekeeper needs that one confirmation.
 
 ### Linux
-
-Make the binary executable and run it:
 
 ```bash
 chmod +x Cokpyt-linux-amd64
 ./Cokpyt-linux-amd64
 ```
 
-For system-wide access, move it to a directory on your `$PATH`:
+To run it from anywhere:
 
 ```bash
 sudo mv Cokpyt-linux-amd64 /usr/local/bin/cokpyt
 ```
 
----
-
 ## Install via pip
-
-The companion package on PyPI launches the same app:
 
 ```bash
 python -m pip install cokpyt
-```
-
-Start it with:
-
-```bash
 python -m cokpyt
 ```
 
----
+## Requirements
 
-## System Requirements
-
-| Requirement | Minimum |
+| | |
 |---|---|
-| **OS** | Windows 10 (x64), macOS 11, or a modern Linux distro |
-| **Python** | 3.8 or later (must be on `$PATH`) |
-| **pip** | Any version supported by your Python installation |
-| **Internet** | Required for PyPI search and Doctor's connectivity check |
+| **OS** | Windows 10, macOS 11, or a recent Linux distribution |
+| **Python** | 3.8 or later, on `PATH` |
+| **Internet** | PyPI search and the Doctor connectivity check |
 
-> **Note:** Cokpyt manages whichever `python` and `pip` executables are on your system `$PATH`. If you use virtual environments, activate the one you want to manage before launching Cokpyt.
+Cokpyt manages whichever environment is active in the sidebar. See [Environments](./features/environments) for how one is chosen.
 
----
+## Next
 
-## Verifying Your Installation
-
-Open the **[Doctor](./features/doctor)** page and click **Re-run checks**. A fully green report means Python, pip, and PyPI connectivity are all working.
+Open [Doctor](./features/doctor) after the first launch. Three green checks mean Python, pip, and PyPI are all reachable.

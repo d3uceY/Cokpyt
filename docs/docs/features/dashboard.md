@@ -1,40 +1,30 @@
-﻿---
+---
 sidebar_position: 1
 ---
 
-# Dashboard
+# Overview
 
-The **Dashboard** (labelled *Overview* in the app) is the first page you see.
+The first page you see: what Cokpyt found on this machine, and what changed recently.
 
-![Dashboard overview](/img/dashboard.png)
+![The Overview page](/img/dashboard.png)
 
----
+## Stat cards
 
-## Stat Cards
-
-Four cards at the top:
-
-| Card | What it shows |
-|---|---|
-| **Environments** | How many environments exist, and how many hold packages |
-| **Packages in total** | Packages across all environments |
-| **Updates available** | Packages behind PyPI in the active environment |
-| **Active interpreter** | Version and name of the environment every page is working in |
-
----
+Environments, packages in total, pending updates, and the active interpreter. The note under each number says where it comes from.
 
 ## Environments
 
-Every environment on the machine, with its kind, Python version, and package count. Click a row to make it active, or **Manage** to open the [Environments](./environments) page.
+Every environment Cokpyt found, with its kind, Python version, and package count.
 
----
+- Click a row to make it active.
+- **Use** switches to that environment.
+- **Open** reveals it in your file manager.
+- **Manage** opens [Environments](./environments).
 
-## Recent Activity
+## Recent activity
 
-The six most recent pip actions Cokpyt has run, from the [History](./history) log: package, version, action, result, and timestamp. **All history** opens the full page.
+The last few actions from [History](./history): package, version, action, result, and time. **All history** opens the full log.
 
----
+## Status bar
 
-## Footer Status Bar
-
-The bar at the bottom shows environment and package counts, the active environment's pip version, and the active environment's name.
+The bottom of the window carries the active environment, its pip version, and the package totals across every environment.
