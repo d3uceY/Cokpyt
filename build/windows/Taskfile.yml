@@ -17,11 +17,12 @@ vars:
 tasks:
   build:
     summary: Builds Cokpyt for Windows
-    deps:
-      - task: common:go:mod:tidy
-      - task: common:generate:bindings
-      - task: common:generate:icons
+    # Sequenced rather than listed as deps: task runs deps in parallel, and the
+    # frontend build needs the bindings it is generated from.
     cmds:
+      - task: common:go:mod:tidy
+      - task: common:prepare
+      - task: common:generate:icons
       - task: generate:syso
       - go build {{.BUILD_FLAGS}} -o "{{.BIN_DIR}}/{{.APP_NAME}}.exe"
       - cmd: powershell -NoProfile -Command "Remove-Item *.syso -Force -ErrorAction SilentlyContinue"

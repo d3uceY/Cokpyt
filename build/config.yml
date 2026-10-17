@@ -14,9 +14,9 @@ dev_mode:
   root_path: .
   log_level: warn
   debounce: 1000
-  # The frontend has no build step, so there is nothing to watch but source.
-  # The bindings directory is generated and watching it makes the rebuild loop
-  # chase its own output.
+  # The frontend is served by Vite, which does its own hot reloading, so only
+  # Go changes need to rebuild the binary. The bindings directory is generated
+  # and watching it makes the rebuild loop chase its own output.
   #
   # Two things here are load-bearing and easy to break:
   #
@@ -34,6 +34,8 @@ dev_mode:
       - .task
       - bin
       - bindings
+      - node_modules
+      - dist
       - assets
       # `wails3 generate bindings --clean` stages its output in a dot-prefixed
       # sibling of the bindings directory and then syncs it in, so the generated
@@ -46,16 +48,17 @@ dev_mode:
     file:
       - .DS_Store
       - .gitignore
-    # The frontend is embedded in the binary, so an edit to it needs the same
-    # rebuild as an edit to Go. Watching only *.go would silently ignore CSS.
+    # Vite hot-reloads the frontend from source, so only Go changes need the
+    # binary rebuilt and the window restarted.
     watched_extension:
       - "*.go"
-      - "*.js"
-      - "*.css"
-      - "*.html"
   executes:
     - cmd: wails3 task bindings
-      type: blocking
+      type: once
+    - cmd: wails3 task deps
+      type: once
+    - cmd: wails3 task frontend
+      type: background
     - cmd: wails3 build DEV=true
       type: blocking
     - cmd: wails3 task run

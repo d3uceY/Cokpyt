@@ -16,11 +16,12 @@ vars:
 tasks:
   build:
     summary: Builds Cokpyt for macOS
-    deps:
-      - task: common:go:mod:tidy
-      - task: common:generate:bindings
-      - task: common:generate:icons
+    # Sequenced rather than listed as deps: task runs deps in parallel, and the
+    # frontend build needs the bindings it is generated from.
     cmds:
+      - task: common:go:mod:tidy
+      - task: common:prepare
+      - task: common:generate:icons
       - go build {{.BUILD_FLAGS}} -o "{{.BIN_DIR}}/{{.APP_NAME}}"
     vars:
       BUILD_FLAGS: '{{if eq .DEV "true"}}-tags dev -buildvcs=false -gcflags=all="-l"{{else}}-tags production -trimpath -buildvcs=false -ldflags="-w -s"{{end}}'

@@ -30,12 +30,25 @@ tasks:
       - task: "{{OS}}:run"
 
   test:
-    summary: Runs the Go tests and syntax-checks the frontend
+    summary: Builds the frontend, then runs the Go tests
     cmds:
+      # main.go embeds frontend/dist, so the bundle has to exist before Go can
+      # compile, let alone test.
+      - task: common:install:frontend:deps
+      - task: common:build:frontend
       - go test ./...
-      - node scripts/check-frontend.mjs
 
   bindings:
-    summary: Regenerates the frontend's ES module bindings
+    summary: Regenerates the frontend's bindings and bundled runtime
     cmds:
       - task: common:generate:bindings
+
+  deps:
+    summary: Installs the frontend's npm dependencies
+    cmds:
+      - task: common:install:frontend:deps
+
+  frontend:
+    summary: Runs the Vite dev server that `wails3 dev` proxies to
+    cmds:
+      - task: common:dev:frontend

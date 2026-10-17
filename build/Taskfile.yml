@@ -1,8 +1,8 @@
 # Shared build steps.
 #
-# There is no frontend build: the page is plain HTML, CSS and ES modules, and
-# the Wails CLI writes the bindings as ES modules too. So the only generated
-# input is frontend/bindings, and the only compiler is Go.
+# The frontend is React, bundled by Vite, and only the bundle in
+# frontend/dist is embedded in the binary. So every build produces that
+# directory, and the generated bindings have to exist before it can be bundled.
 
 version: '3'
 
@@ -19,15 +19,59 @@ tasks:
       - go mod tidy
 
   generate:bindings:
-    summary: Generates the frontend's ES module bindings from the Go services
+    summary: Generates the frontend's ES module bindings and bundled runtime
     run: once
     cmds:
       # -b bundles the Wails runtime at /wails/runtime.js instead of importing
-      # the npm package, which is what lets the frontend run with no bundler.
+      # the npm package, which keeps the frontend on exactly the runtime version
+      # the Go module ships.
       # The CLI prints its progress on stderr, and Windows PowerShell turns a
       # native command's stderr into an error record, which fails the task and
       # makes a good build exit 1. Merging the two streams keeps it on stdout.
       - wails3 generate bindings -b -clean 2>&1
+      # Vite resolves the bindings' `/wails/runtime.js` import to this copy.
+      # It has to come after the bindings, whose -clean empties the directory.
+      - wails3 generate runtime -d frontend/bindings
+
+  install:frontend:deps:
+    summary: Installs the frontend's npm dependencies
+    dir: frontend
+    sources:
+      - "package.json"
+      - "package-lock.json"
+    generates:
+      - "node_modules/.package-lock.json"
+    cmds:
+      - npm ci
+
+  build:frontend:
+    summary: Bundles the React frontend into frontend/dist
+    dir: frontend
+    sources:
+      - "index.html"
+      - "vite.config.js"
+      - "package.json"
+      - "src/**/*"
+      - "public/**/*"
+      - "bindings/**/*"
+    generates:
+      - "dist/index.html"
+    cmds:
+      - npm run build
+
+  dev:frontend:
+    summary: Runs the Vite dev server `wails3 dev` proxies to
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  prepare:
+    summary: Regenerates the bindings and builds the frontend bundle
+    internal: true
+    cmds:
+      - task: generate:bindings
+      - task: install:frontend:deps
+      - task: build:frontend
 
   generate:icons:
     summary: Generates the Windows .ico and macOS .icns from build/appicon.png

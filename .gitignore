@@ -6,9 +6,15 @@ build/bin/
 # go-task's checksum cache, written by `wails3 task`
 .task/
 
-# Generated from the Go services by `wails3 generate bindings -b`.
-# `wails3 build` and `wails3 task compile` regenerate it before compiling.
+# Generated from the Go services by `wails3 generate bindings -b`, plus the
+# bundled runtime `wails3 generate runtime` writes beside them.
+# `wails3 build` and `wails3 task bindings` regenerate both before compiling.
 frontend/bindings/
+
+# The frontend build. main.go embeds this directory, and `wails3 build` creates
+# it before compiling Go.
+frontend/dist/
+frontend/node_modules/
 
 # Reference material: cloned repositories and notes, not part of the app.
 references/
