@@ -3,13 +3,26 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { actionCell, confirmDialog, empty, h, icon, loading, panel, replace, table, toast } from "../ui.js";
+import { actionCell, busy, confirmDialog, empty, h, icon, loading, panel, replace, table, toast } from "../ui.js";
 
 export const meta = { eyebrow: "Active environment", title: "Updates" };
 
+let unsubscribe = null;
+
+/* cleanup runs when the shell replaces this page. */
+export function cleanup() {
+  if (unsubscribe) unsubscribe();
+  unsubscribe = null;
+}
+
 export function actions(ctx) {
   return [
-    h("button", { class: "btn", type: "button", onclick: () => ctx.refresh() }, icon("refresh", 14), "Check again"),
+    h(
+      "button",
+      { class: "btn", type: "button", onclick: (event) => busy(event.currentTarget, () => ctx.refresh()) },
+      icon("refresh", 14),
+      "Check again",
+    ),
   ];
 }
 
@@ -20,6 +33,49 @@ export async function render(ctx) {
   const body = h("div", {}, loading("Asking PyPI…"));
   const list = await store.outdated(python, { force: false });
 
+  const opsBanner = h("div", { class: "op-banner", hidden: true });
+  const rowActions = new Map();
+  let upgradeAll = null;
+
+  function paintOperations() {
+    const running = store.runningOperations(python);
+    const working = store.operationNames(python);
+    const busyNow = running.length > 0;
+
+    if (busyNow) {
+      opsBanner.hidden = false;
+      replace(
+        opsBanner,
+        h("span", { class: "spinner" }),
+        h("span", { class: "op-text", text: store.describeOperation(running[0]) }),
+        running.length > 1 ? h("span", { class: "eyebrow", text: `+${running.length - 1} more` }) : null,
+      );
+    } else {
+      opsBanner.hidden = true;
+      replace(opsBanner);
+    }
+
+    for (const [key, cell] of rowActions) {
+      const slot = cell.querySelector(".cell-actions");
+      const spin = slot.querySelector(".spinner");
+      if (working.has(key)) {
+        if (!spin) slot.prepend(h("span", { class: "spinner" }));
+      } else if (spin) {
+        spin.remove();
+      }
+      for (const button of slot.querySelectorAll("button")) button.disabled = busyNow;
+    }
+
+    if (upgradeAll) upgradeAll.disabled = busyNow;
+  }
+
+  function mounted(node) {
+    paintOperations();
+    cleanup();
+    unsubscribe = store.subscribe(paintOperations);
+    return h("div", { class: "stack" }, opsBanner, node);
+  }
+
   if (list.length === 0) {
     replace(
       body,
@@ -29,11 +85,11 @@ export async function render(ctx) {
         "check",
       ),
     );
-    return panel("Outdated", body);
+    return mounted(panel("Outdated", body));
   }
 
-  const rows = list.map((item) =>
-    h(
+  const rows = list.map((item) => {
+    const row = h(
       "tr",
       {},
       h(
@@ -67,17 +123,18 @@ export async function render(ctx) {
           {
             class: "btn btn-sm btn-ghost btn-primary",
             type: "button",
-            onclick: async () => {
-              const ok = await store.operate(python, `Upgrading ${item.name}`, () => api.upgrade(python, item.name));
-              if (ok) ctx.refresh();
-            },
+            onclick: (event) =>
+              busy(event.currentTarget, () => store.start(() => api.upgrade(python, item.name))),
           },
           icon("arrow_upward", 13),
           "Upgrade",
         ),
       ),
-    ),
-  );
+    );
+
+    rowActions.set(store.normalise(item.name), row.lastElementChild);
+    return row;
+  });
 
   const toolbar = h(
     "div",
@@ -85,7 +142,7 @@ export async function render(ctx) {
     h("span", { class: "eyebrow", text: `${list.length} behind` }),
     summaryCounts(list),
     h("span", { class: "panel-toolbar-spacer" }),
-    updateAllButton(ctx, list),
+    (upgradeAll = updateAllButton(ctx, list)),
   );
 
   replace(
@@ -105,7 +162,7 @@ export async function render(ctx) {
       ),
     ),
   );
-  return panel("Outdated", body, { toolbar });
+  return mounted(panel("Outdated", body, { toolbar }));
 }
 
 function summaryCounts(list) {
@@ -126,26 +183,17 @@ function updateAllButton(ctx, list) {
     {
       class: "btn btn-primary btn-sm",
       type: "button",
-      onclick: async () => {
-        const yes = await confirmDialog({
-          title: `Upgrade ${list.length} package${list.length === 1 ? "" : "s"}?`,
-          text: `${ctx.env.label} is updated one package at a time. A major bump can break things.`,
-          confirm: "Upgrade all",
-        });
-        if (!yes) return;
+      onclick: (event) =>
+        busy(event.currentTarget, async () => {
+          const yes = await confirmDialog({
+            title: `Upgrade ${list.length} package${list.length === 1 ? "" : "s"}?`,
+            text: `${ctx.env.label} is updated one package at a time. A major bump can break things.`,
+            confirm: "Upgrade all",
+          });
+          if (!yes) return;
 
-        ctx.setBusy(true);
-        let failures = [];
-        const ok = await store.operate(ctx.env.python, `Upgrading ${list.length} packages`, async () => {
-          failures = (await api.upgradeMany(ctx.env.python, list.map((item) => item.name))) || [];
-        });
-        ctx.setBusy(false);
-
-        if (ok && failures.length > 0) {
-          toast(`${failures.length} could not be upgraded. ${failures[0]}`, "warn");
-        }
-        ctx.refresh();
-      },
+          await store.start(() => api.upgradeMany(ctx.env.python, list.map((item) => item.name)));
+        }),
     },
     "Upgrade all",
   );

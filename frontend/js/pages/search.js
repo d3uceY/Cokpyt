@@ -5,7 +5,7 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { actionCell, empty, h, icon, loading, panel, replace, toast } from "../ui.js";
+import { actionCell, busy, empty, h, icon, loading, panel, replace, toast } from "../ui.js";
 
 const DEBOUNCE_MS = 300;
 
@@ -15,11 +15,20 @@ export const meta = {
   subtitle: "Find and install into the active environment.",
 };
 
+let unsubscribe = null;
+
+export function cleanup() {
+  if (unsubscribe) unsubscribe();
+  unsubscribe = null;
+}
+
 let query = "";
 let results = null;
 
 export async function render(ctx) {
   const body = h("div", {});
+  const opsBanner = h("div", { class: "op-banner", hidden: true });
+  let installButtons = [];
 
   const input = h("input", {
     class: "input",
@@ -73,7 +82,44 @@ export async function render(ctx) {
     show();
   }
 
+  function paintOperations() {
+    const running = store.runningOperations(ctx.env.python);
+    const busyNow = running.length > 0;
+
+    if (busyNow) {
+      opsBanner.hidden = false;
+      replace(
+        opsBanner,
+        h("span", { class: "spinner" }),
+        h("span", { class: "op-text", text: store.describeOperation(running[0]) }),
+      );
+    } else {
+      opsBanner.hidden = true;
+      replace(opsBanner);
+    }
+
+    for (const button of installButtons) button.disabled = busyNow;
+  }
+
+  function installButton(result, installed) {
+    const button = h(
+      "button",
+      {
+        class: "btn btn-sm btn-ghost btn-primary",
+        type: "button",
+        disabled: store.runningOperations(ctx.env.python).length > 0,
+        onclick: (event) =>
+          busy(event.currentTarget, () => store.start(() => api.install(ctx.env.python, result.name))),
+      },
+      icon(installed ? "refresh" : "download", 13),
+      installed ? "Reinstall" : "Install",
+    );
+    installButtons.push(button);
+    return button;
+  }
+
   function show() {
+    installButtons = [];
     if (!query.trim()) {
       replace(
         body,
@@ -112,6 +158,7 @@ export async function render(ctx) {
             {},
             results.map((result) => {
               const installed = known.has(store.normalise(result.name));
+              const install = installButton(result, installed);
               return h(
                 "tr",
                 {},
@@ -147,24 +194,7 @@ export async function render(ctx) {
                         icon("open_in_new", 13),
                       )
                     : null,
-                  h(
-                    "button",
-                    {
-                      class: "btn btn-sm btn-ghost btn-primary",
-                      type: "button",
-                      onclick: async () => {
-                        const ok = await store.operate(ctx.env.python, `Installing ${result.name}`, () =>
-                          api.install(ctx.env.python, result.name),
-                        );
-                        if (ok) {
-                          known.add(store.normalise(result.name));
-                          show();
-                        }
-                      },
-                    },
-                    icon(installed ? "refresh" : "download", 13),
-                    installed ? "Reinstall" : "Install",
-                  ),
+                  install,
                 ),
               );
             }),
@@ -177,5 +207,9 @@ export async function render(ctx) {
   show();
   setTimeout(() => input.focus(), 0);
 
-  return panel("Results", body, { toolbar: field });
+  paintOperations();
+  cleanup();
+  unsubscribe = store.subscribe(paintOperations);
+
+  return h("div", { class: "stack" }, opsBanner, panel("Results", body, { toolbar: field }));
 }

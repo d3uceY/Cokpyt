@@ -28,6 +28,7 @@ export const api = {
   selectEnvironment: (python) => call(App.SelectEnvironment, python),
   packageCounts: () => call(App.PackageCounts),
   environmentInfo: (python) => call(App.EnvironmentInfo, python),
+  operations: () => call(App.Operations),
 
   packages: (python) => call(App.Packages, python),
   outdated: (python) => call(App.Outdated, python),
@@ -48,8 +49,6 @@ export const api = {
   refreshIndex: () => call(App.RefreshIndex),
   history: () => call(App.History),
   clearHistory: () => call(App.ClearHistory),
-  logs: () => call(App.Logs),
-  clearLogs: () => call(App.ClearLogs),
 
   setTheme: (theme) => call(App.SetTheme, theme),
   introSeen: () => call(App.IntroSeen),

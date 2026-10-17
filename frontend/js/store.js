@@ -6,7 +6,7 @@
    environment and invalidated when an operation could have changed them. */
 
 import { api } from "./api.js";
-import { output, toast } from "./ui.js";
+import { toast } from "./ui.js";
 
 export const state = {
   version: "",
@@ -16,6 +16,7 @@ export const state = {
   envs: [],
   notes: [],
   counts: {},
+  operations: [],
   scanned: false,
   scanning: false,
 };
@@ -103,6 +104,43 @@ export async function selectEnvironment(python) {
   announce();
 }
 
+export async function refreshOperations() {
+  state.operations = (await api.operations()) || [];
+  announce();
+  return state.operations;
+}
+
+export function applyOperations(list) {
+  state.operations = Array.isArray(list) ? list : [];
+  announce();
+}
+
+export function runningOperations(python) {
+  return state.operations.filter((op) => op.running && (!python || op.env === python));
+}
+
+const VERBS = {
+  install: "Installing",
+  upgrade: "Upgrading",
+  uninstall: "Uninstalling",
+  cleanup: "Cleaning up",
+};
+
+export function describeOperation(op) {
+  const verb = VERBS[op.kind] || "Working on";
+  const what = op.name || op.target || "packages";
+  const steps = op.total > 1 ? ` · ${Math.min(op.done, op.total)}/${op.total}` : "";
+  return `${verb} ${what}${steps}`;
+}
+
+export function operationNames(python) {
+  const names = new Set();
+  for (const op of runningOperations(python)) {
+    if (op.name) names.add(normalise(op.name));
+  }
+  return names;
+}
+
 export async function packageCounts() {
   state.counts = (await api.packageCounts()) || {};
   announce();
@@ -150,23 +188,14 @@ export function invalidate(python) {
   cache.history = null;
 }
 
-/* operate runs one pip action: it opens the console so pip's own output is
-   visible while it works, then refreshes whatever the action invalidated. */
-export async function operate(python, label, work) {
-  output.show();
-  output.progress(`${label}…`);
+export async function start(work) {
   try {
     await work();
-    invalidate(python);
-    toast(`${label}. Done.`, "ok");
-    return true;
   } catch (error) {
-    invalidate(python);
     toast(error.message, "danger");
-    return false;
-  } finally {
-    output.progress("");
   }
+
+  setTimeout(announce, 0);
 }
 
 export async function history({ force = false } = {}) {

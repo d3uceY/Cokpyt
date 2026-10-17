@@ -1,4 +1,4 @@
-/* The shell: sidebar, environment picker, router, status bar, console.
+/* The shell: sidebar, environment picker, router, status bar.
 
    Pages are ES modules loaded on demand. Each exports `meta` for the page head,
    optional `actions` for the top-right buttons, and `render` for the body. */
@@ -6,7 +6,7 @@
 import { Events } from "/wails/runtime.js";
 import { api } from "./api.js";
 import * as store from "./store.js";
-import { $, errorNote, h, hydrateIcons, icon, loading, output, replace, scanningBlock, toast } from "./ui.js";
+import { $, busy, errorNote, h, hydrateIcons, icon, loading, replace, scanningBlock, toast } from "./ui.js";
 
 const ROUTES = [
   { path: "/", label: "Overview", icon: "dashboard", load: () => import("./pages/overview.js") },
@@ -22,8 +22,10 @@ const ROUTES = [
 ];
 
 let current = null;
-let busy = 0;
+let busyCount = 0;
 let scanMessage = "";
+
+const opsSlot = h("span", { class: "statusbar-item", hidden: true });
 
 /* ── boot ─────────────────────────────────────────────────────────────────── */
 
@@ -104,46 +106,28 @@ function wireChrome() {
   $("theme-toggle").addEventListener("click", () => {
     store.applyTheme(store.state.theme === "dark" ? "light" : "dark");
   });
-
-  $("console-close").addEventListener("click", () => output.hide());
-  $("console-clear").addEventListener("click", () => output.clear());
-  $("console-copy").addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(output.text());
-      toast("Copied.", "ok");
-    } catch {
-      toast("Clipboard unavailable.", "danger");
-    }
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !$("console").hidden) output.hide();
-  });
 }
 
+/* rescan re-inventories the machine. The button carries the wait: it spins for
+   as long as the sweep runs, and the status bar names what is being looked for. */
 async function rescan() {
-  const button = $("env-rescan");
-  const label = $("env-rescan-label");
-  button.disabled = true;
-  label.textContent = "Scanning";
   store.state.scanning = true;
   paintChrome();
-  try {
-    await store.rescan();
-    renderEnvPicker();
-    invalidatePageCaches();
-    await store.packageCounts();
-    await renderPage();
-    toast(`Found ${store.state.envs.length} environments.`, "ok");
-  } catch (error) {
-    toast(error.message, "danger");
-  } finally {
-    button.disabled = false;
-    label.textContent = "Rescan";
-    store.state.scanning = false;
-    output.progress("");
-    paintChrome();
-  }
+  await busy($("env-rescan"), async () => {
+    try {
+      await store.rescan();
+      renderEnvPicker();
+      invalidatePageCaches();
+      await store.packageCounts();
+      await renderPage();
+      toast(`Found ${store.state.envs.length} environments.`, "ok");
+    } catch (error) {
+      toast(error.message, "danger");
+    } finally {
+      store.state.scanning = false;
+      paintChrome();
+    }
+  });
 }
 
 /* While the sweep is running and nothing has been found yet, the picker says
@@ -188,6 +172,8 @@ function paintChrome() {
   const env = store.activeEnv();
   $("env-health").dataset.state = env ? "ok" : "unknown";
   $("env-health").title = env ? env.python : "No environment selected";
+
+  paintOperations();
 }
 
 async function refreshStatusBar() {
@@ -228,7 +214,25 @@ async function refreshStatusBar() {
   replace(
     bar,
     parts,
+    opsSlot,
     h("span", { class: "statusbar-right" }, icon("hub", 13), h("span", { text: store.activeLabel() })),
+  );
+  paintOperations();
+}
+
+function paintOperations() {
+  const running = store.runningOperations();
+  opsSlot.hidden = running.length === 0;
+  syncPageActions();
+  if (running.length === 0) {
+    replace(opsSlot);
+    return;
+  }
+  replace(
+    opsSlot,
+    h("span", { class: "spinner" }),
+    h("span", { text: store.describeOperation(running[0]) }),
+    running.length > 1 ? h("span", { class: "eyebrow", text: `+${running.length - 1} more` }) : null,
   );
 }
 
@@ -267,8 +271,13 @@ async function renderPage() {
   }
   if (stale()) return;
 
+  const previous = current;
   current = page;
+  previous?.cleanup?.();
   paintHead(page);
+
+  await store.refreshOperations().catch(() => {});
+  if (stale()) return;
 
   const env = store.activeEnv();
   if (page.needsEnvironment !== false && !env) {
@@ -299,8 +308,6 @@ async function renderPage() {
   paintChrome();
 }
 
-/* selectEnvironment switches the active environment, drops the caches that
-   belonged to the old one, and redraws whatever is on screen. */
 async function selectEnvironment(python) {
   if (python === store.state.active) return;
   try {
@@ -314,15 +321,16 @@ async function selectEnvironment(python) {
   }
 }
 
-/* setBusy disables the page's own action buttons while work is in flight, so
-   a double-click cannot start the same pip run twice. */
 function setBusy(value) {
   const flag = Boolean(value);
-  busy += flag ? 1 : -1;
-  if (busy < 0) busy = 0;
-  for (const button of document.querySelectorAll("#page-actions button")) {
-    button.disabled = busy > 0;
-  }
+  busyCount += flag ? 1 : -1;
+  if (busyCount < 0) busyCount = 0;
+  syncPageActions();
+}
+
+function syncPageActions() {
+  const blocked = busyCount > 0 || store.runningOperations().length > 0;
+  for (const button of document.querySelectorAll("#page-actions button")) button.disabled = blocked;
 }
 
 function paintHead(page) {
@@ -333,6 +341,7 @@ function paintHead(page) {
   $("page-sub").hidden = !meta.subtitle;
   const actions = page.actions ? page.actions({ refresh: renderPage, setBusy }) : [];
   replace($("page-actions"), actions.flat().filter(Boolean));
+  syncPageActions();
 }
 
 /* ── runtime events ───────────────────────────────────────────────────────── */
@@ -343,23 +352,13 @@ function payload(event) {
 }
 
 function wireEvents() {
-  Events.On("log", (event) => {
-    const [level, message] = payload(event);
-    const prefix = level === "ERR" ? "✗ " : level === "INFO" ? "→ " : "  ";
-    output.write(prefix + message);
-    if (level !== "STREAM") output.show();
-  });
-
   Events.On("scan:progress", (event) => {
     const [message] = payload(event);
     scanMessage = message || "";
-    output.progress(scanMessage);
     if (store.state.envs.length === 0) renderEnvPicker();
-    else $("env-rescan-label").textContent = "Scanning";
   });
 
   Events.On("scan:done", async () => {
-    output.progress("");
     if (!store.state.scanning) return;
     try {
       await store.bootstrap();
@@ -374,8 +373,32 @@ function wireEvents() {
       toast(error.message, "danger");
     }
   });
+
+  Events.On("ops:changed", (event) => {
+    const [list] = payload(event);
+    store.applyOperations(list);
+  });
+
+  Events.On("op:done", async (event) => {
+    const [op] = payload(event);
+    if (!op) return;
+
+    store.invalidate(op.env);
+
+    if (op.failed) {
+      toast(op.message || `${store.describeOperation(op)} failed.`, "danger");
+    } else if (op.failures && op.failures.length > 0) {
+      toast(`${op.failures.length} could not be changed. ${op.failures[0]}`, "warn");
+    } else {
+      toast(`${store.describeOperation(op)}. Done.`, "ok");
+    }
+
+    if (op.env === store.state.active) {
+      await renderPage();
+    }
+    refreshStatusBar();
+  });
 }
 
-/* ── go ───────────────────────────────────────────────────────────────────── */
 
 boot();

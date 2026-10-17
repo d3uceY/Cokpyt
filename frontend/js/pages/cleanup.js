@@ -5,13 +5,20 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { confirmDialog, formatBytes, h, icon, loading, panel, plural, replace, toast } from "../ui.js";
+import { busy, confirmDialog, formatBytes, h, icon, loading, panel, plural, replace } from "../ui.js";
 
 export const meta = {
   eyebrow: "Active environment",
   title: "Cleanup",
   subtitle: "Leftovers pip and Python leave behind.",
 };
+
+let unsubscribe = null;
+
+export function cleanup() {
+  if (unsubscribe) unsubscribe();
+  unsubscribe = null;
+}
 
 export async function render(ctx) {
   const python = ctx.env.python;
@@ -21,8 +28,10 @@ export async function render(ctx) {
 
   const runButton = h("button", { class: "btn btn-primary", type: "button", disabled: true }, "Run cleanup");
   const total = h("span", { class: "eyebrow" });
+  const opsBanner = h("div", { class: "op-banner", hidden: true });
 
   let categories = [];
+  let selectedBytes = 0;
   try {
     categories = await api.cleanupScan(python);
   } catch (error) {
@@ -30,33 +39,48 @@ export async function render(ctx) {
     return panel("Reclaimable", body);
   }
 
-  function paintTotal() {
-    const bytes = categories.filter((c) => selected.has(c.kind)).reduce((sum, c) => sum + c.size, 0);
-    total.textContent = selected.size
-      ? `${formatBytes(bytes)} selected`
-      : `${formatBytes(categories.reduce((sum, c) => sum + c.size, 0))} available`;
-    runButton.disabled = selected.size === 0 || bytes === 0;
+  function paintOperations() {
+    const running = store.runningOperations(python);
+    const busyNow = running.length > 0;
+
+    if (busyNow) {
+      opsBanner.hidden = false;
+      replace(
+        opsBanner,
+        h("span", { class: "spinner" }),
+        h("span", { class: "op-text", text: store.describeOperation(running[0]) }),
+      );
+    } else {
+      opsBanner.hidden = true;
+      replace(opsBanner);
+    }
+
+    runButton.disabled = selectedBytes === 0 || busyNow;
   }
 
-  runButton.addEventListener("click", async () => {
-    const bytes = categories.filter((c) => selected.has(c.kind)).reduce((sum, c) => sum + c.size, 0);
-    const yes = await confirmDialog({
-      title: "Run cleanup?",
-      text: `${formatBytes(bytes)} will be freed from ${ctx.env.label}. Deleted caches are re-downloaded when needed.`,
-      confirm: "Clean up",
-      danger: true,
-    });
-    if (!yes) return;
+  function paintTotal() {
+    selectedBytes = categories.filter((c) => selected.has(c.kind)).reduce((sum, c) => sum + c.size, 0);
+    total.textContent = selected.size
+      ? `${formatBytes(selectedBytes)} selected`
+      : `${formatBytes(categories.reduce((sum, c) => sum + c.size, 0))} available`;
+    paintOperations();
+  }
 
-    const kinds = [...selected];
-    ctx.setBusy(true);
-    const ok = await store.operate(python, "Cleaning up", () => api.cleanupRun(python, kinds));
-    ctx.setBusy(false);
-    if (ok) {
-      toast(`${formatBytes(bytes)} freed.`, "ok");
-      ctx.refresh();
-    }
-  });
+  runButton.addEventListener("click", (event) =>
+    busy(event.currentTarget, async () => {
+      const bytes = categories.filter((c) => selected.has(c.kind)).reduce((sum, c) => sum + c.size, 0);
+      const yes = await confirmDialog({
+        title: "Run cleanup?",
+        text: `${formatBytes(bytes)} will be freed from ${ctx.env.label}. Deleted caches are re-downloaded when needed.`,
+        confirm: "Clean up",
+        danger: true,
+      });
+      if (!yes) return;
+
+      const kinds = [...selected];
+      await store.start(() => api.cleanupRun(python, kinds));
+    }),
+  );
 
   const rows = categories.map((category) =>
     h(
@@ -84,10 +108,12 @@ export async function render(ctx) {
 
   replace(body, h("div", {}, rows));
   paintTotal();
+  cleanup();
+  unsubscribe = store.subscribe(paintOperations);
 
-  return panel("Reclaimable", body, {
+  return h("div", { class: "stack" }, opsBanner, panel("Reclaimable", body, {
     actions: [total, runButton],
-  });
+  }));
 }
 
 function explain(category) {
