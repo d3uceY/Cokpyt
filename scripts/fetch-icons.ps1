@@ -1,4 +1,4 @@
-# Regenerates frontend/assets/icons.svg.
+# Regenerates frontend/public/assets/icons.svg.
 #
 # The app uses the Material Symbols icon set (the same one the original
 # Tailwind build imported), but it needs about thirty glyphs, not the whole
@@ -10,7 +10,7 @@
 
 param(
     [string]$Version = '0.28.0',
-    [string]$Out = "$PSScriptRoot/../frontend/assets/icons.svg"
+    [string]$Out = "$PSScriptRoot/../frontend/public/assets/icons.svg"
 )
 
 $ErrorActionPreference = 'Stop'

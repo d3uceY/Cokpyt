@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Cokpyt</title>
     <link rel="icon" href="/assets/logo-light.png" />
-    <link rel="stylesheet" href="/css/app.css" />
     <script>
       // Applied before first paint so the window never flashes the wrong
       // theme. The real value lives in the Go config; this is only a cache.
@@ -16,64 +15,7 @@
     </script>
   </head>
   <body>
-    <aside class="sidebar">
-      <div class="brand">
-        <img class="brand-logo" src="/assets/logo-light.png" alt="" data-logo="light" />
-        <img class="brand-logo" src="/assets/logo-dark.png" alt="" data-logo="dark" />
-        <div class="brand-text">
-          <span class="brand-name">Cokpyt</span>
-          <span class="brand-sub">pip manager</span>
-        </div>
-      </div>
-
-      <div class="env-picker">
-        <span class="eyebrow">Environment</span>
-        <select id="env-select" class="select" aria-label="Active environment"></select>
-        <button
-          type="button"
-          class="btn btn-ghost btn-sm"
-          id="env-rescan"
-          title="Look for environments again"
-        >
-          <span data-icon="refresh" data-size="14"></span>
-          <span>Rescan</span>
-        </button>
-      </div>
-
-      <nav class="nav" id="nav" aria-label="Sections"></nav>
-
-      <div class="sidebar-foot">
-        <span class="status-dot" id="env-health" title="Environment state"></span>
-        <span class="eyebrow" id="version-label">v0.3.0</span>
-        <button
-          type="button"
-          class="icon-btn"
-          id="theme-toggle"
-          aria-label="Switch theme"
-          title="Switch theme"
-        >
-          <span data-icon="dark_mode" data-size="16"></span>
-        </button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="page-head">
-        <div class="page-head-text">
-          <p class="eyebrow" id="page-eyebrow"></p>
-          <h1 class="page-title" id="page-title"></h1>
-          <p class="page-sub" id="page-sub"></p>
-        </div>
-        <div class="page-actions" id="page-actions"></div>
-      </header>
-
-      <div class="view" id="view" tabindex="-1"></div>
-
-      <footer class="statusbar" id="statusbar"></footer>
-    </main>
-
-    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
-
-    <script type="module" src="/js/app.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
