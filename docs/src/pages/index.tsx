@@ -1,7 +1,6 @@
 import type {ReactNode} from 'react';
 import {useState, useEffect} from 'react';
 import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
@@ -9,13 +8,11 @@ import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import styles from './index.module.css';
 
 function HomepageHeader() {
-  const {siteConfig} = useDocusaurusContext();
-  const logoUrl = useBaseUrl('/img/logo.png');
   const heroUrl = useBaseUrl('/img/hero.png');
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('https://api.github.com/repos/d3ucey/Cokpyt/releases/latest', {
+    fetch('https://api.github.com/repos/d3uceY/Cokpyt/releases/latest', {
       headers: {Accept: 'application/vnd.github+json'},
     })
       .then((r) => r.json())
@@ -26,50 +23,55 @@ function HomepageHeader() {
   }, []);
 
   return (
-    <header className={styles.heroBanner}>
+    <header className={styles.hero}>
       <div className={styles.heroInner}>
         <div className={styles.heroText}>
-          <div className={styles.heroLockup}>
-            <img src={logoUrl} alt="Cokpyt" className={styles.heroLogo} />
-            <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
-          </div>
-          <p className={styles.heroSubtitle}>{siteConfig.tagline}</p>
-          <div className={styles.buttons}>
-            <Link className={styles.ctaButton} to="/docs/intro">
-              Get Started →
+          <h1 className={styles.title}>
+            Every Python environment.
+            <br />
+            One window.
+          </h1>
+
+          <p className={styles.subtitle}>
+            A desktop GUI for pip. Browse, install, upgrade, and remove packages
+            without the terminal.
+          </p>
+
+          <div className={styles.actions}>
+            <Link className={styles.primary} to="/docs/installation">
+              Download
             </Link>
-            <Link className={styles.ctaButtonOutline} to="/docs/features/dashboard">
-              See Features
+            <Link className={styles.secondary} to="/docs/intro">
+              Read the docs
             </Link>
           </div>
-          <div className={styles.heroMeta}>
+
+          <div className={styles.meta}>
             {latestVersion && (
-              <span className={styles.versionBadge}>{latestVersion}</span>
+              <span className={styles.version}>{latestVersion}</span>
             )}
-            <a
-              href="https://github.com/d3ucey"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.followLink}
-            >
-              follow @d3uceY
-            </a>
+            <span className={styles.metaItem}>Windows · macOS · Linux</span>
+            <span className={styles.metaItem}>Runs locally</span>
           </div>
         </div>
-        <div className={styles.heroImageWrap}>
-          <img src={heroUrl} alt="Cokpyt app screenshot" className={styles.heroImage} />
-        </div>
+
+        <figure className={styles.figure}>
+          <img
+            src={heroUrl}
+            alt="The Cokpyt overview page, showing environments, package counts, and recent activity"
+            className={styles.image}
+          />
+        </figure>
       </div>
     </header>
   );
 }
 
 export default function Home(): ReactNode {
-  const {siteConfig} = useDocusaurusContext();
   return (
     <Layout
-      title={`${siteConfig.title} — pip GUI`}
-      description="Cokpyt is a fast, lightweight desktop GUI for pip. Browse installed packages, search PyPI, upgrade, uninstall, run health checks, and more — all without touching the terminal.">
+      title="Cokpyt — pip, without the terminal"
+      description="Cokpyt is a desktop GUI for pip. Every Python environment on your machine in one window: install, upgrade, and uninstall packages, search PyPI, check pip's health, and reclaim disk space.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

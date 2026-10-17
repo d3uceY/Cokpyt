@@ -6,7 +6,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Cokpyt',
-  tagline: 'A desktop GUI for pip. Because life is too short for the terminal.',
+  tagline: 'A desktop GUI for pip.',
   favicon: 'img/appicon.png',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -46,7 +46,9 @@ const config: Config = {
           // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/d3uceY/Cokpyt/tree/main/docs/',
+          breadcrumbs: true,
         },
+
         blog: false,
         theme: {
           customCss: './src/css/custom.css',
@@ -71,7 +73,9 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/hero.png',
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'light',
+      disableSwitch: false,
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: 'Cokpyt',
@@ -94,7 +98,7 @@ const config: Config = {
       ],
     },
     footer: {
-      style: 'dark',
+      style: 'light',
       links: [
         {
           title: 'Documentation',
@@ -144,7 +148,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Cokpyt. Built with Docusaurus.`,
+      copyright: `Cokpyt ${new Date().getFullYear()}`,
     },
     prism: {
       theme: prismThemes.github,

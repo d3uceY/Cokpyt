@@ -1,168 +1,197 @@
-/* Swiss Brutalist homepage — Cokpyt brand theme */
+/* The landing page is the app's Overview page at web scale: a page head with
+   one action, a hairline panel of rows, and a status line under it. */
 
-/* Brand tokens */
-:root {
-  --brand-blue: #0048ad;
-  --brand-dark: #0f1723;
-  --brand-light: #f5f7f8;
-  --brand-blue-hover: #003d99;
-}
-
-.heroBanner {
-  background: var(--brand-dark);
-  border-bottom: 4px solid var(--brand-blue);
-  padding: 5.5rem 0;
+.hero {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
 }
 
 .heroInner {
-  max-width: 1200px;
+  max-width: 1140px;
   margin: 0 auto;
-  padding: 0 2.5rem;
+  padding: 72px 32px 64px;
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 5rem;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 64px;
   align-items: center;
 }
 
 .heroText {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  align-items: flex-start;
+  animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.heroLockup {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.heroLogo {
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.heroTitle {
-  font-size: 3.75rem;
-  font-weight: 900;
-  line-height: 1;
-  color: #fff;
-  letter-spacing: -0.03em;
+.title {
   margin: 0;
-}
-
-.heroSubtitle {
-  font-size: 1rem;
-  color: rgba(255,255,255,0.7);
-  border-left: 4px solid var(--brand-blue);
-  padding-left: 1rem;
-  margin: 0;
-  line-height: 1.7;
-  font-weight: 400;
-}
-
-.buttons {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.ctaButton {
-  display: inline-block;
-  background: var(--brand-blue);
-  color: #fff !important;
-  padding: 0.75rem 1.75rem;
-  font-weight: 700;
-  font-size: 0.85rem;
-  text-decoration: none !important;
-  border: 3px solid var(--brand-blue);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  transition: background 0.12s, border-color 0.12s;
-}
-
-.ctaButton:hover {
-  background: var(--brand-blue-hover);
-  border-color: var(--brand-blue-hover);
-  color: #fff !important;
-}
-
-.ctaButtonOutline {
-  display: inline-block;
-  background: transparent;
-  color: rgba(255,255,255,0.85) !important;
-  padding: 0.75rem 1.75rem;
-  font-weight: 700;
-  font-size: 0.85rem;
-  text-decoration: none !important;
-  border: 3px solid rgba(255,255,255,0.35);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  transition: border-color 0.12s, color 0.12s;
-}
-
-.ctaButtonOutline:hover {
-  border-color: rgba(255,255,255,0.75);
-  color: #fff !important;
-}
-
-.heroMeta {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.versionBadge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.5);
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.15);
-  padding: 0.2rem 0.55rem;
-}
-
-.followLink {
-  font-size: 0.72rem;
+  font-size: 46px;
   font-weight: 600;
-  color: rgba(255,255,255,0.45) !important;
-  text-decoration: none !important;
-  letter-spacing: 0.03em;
-  transition: color 0.12s;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+  color: var(--ink);
 }
 
-.followLink:hover {
-  color: rgba(255,255,255,0.8) !important;
+.subtitle {
+  margin: 18px 0 0;
+  max-width: 34ch;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted);
 }
 
-.heroImageWrap {
-  border: 3px solid var(--brand-blue);
-  box-shadow: 10px 10px 0 var(--brand-blue);
-  overflow: hidden;
-  background: var(--brand-blue);
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 28px;
 }
 
-.heroImage {
-  width: 100%;
+/* One action colour, as in the app. */
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 15px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 100ms, border-color 100ms;
+}
+
+.primary {
+  background: var(--action);
+  border: 1px solid var(--action);
+  color: var(--action-ink);
+  font-weight: 600;
+}
+
+.primary:hover {
+  background: var(--action-hover);
+  border-color: var(--action-hover);
+  color: var(--action-ink);
+  text-decoration: none;
+}
+
+.secondary {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.secondary:hover {
+  background: var(--fill);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.version {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  background: var(--fill);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.metaItem {
+  position: relative;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
+.metaItem + .metaItem::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transform: translateY(-50%);
+}
+
+/* The screenshot is framed the way the app frames a panel: one hairline. */
+.figure {
+  margin: 0;
+  animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) 90ms both;
+}
+
+.image {
   display: block;
-  vertical-align: bottom;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
 }
 
-@media screen and (max-width: 996px) {
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroText,
+  .figure {
+    animation: none;
+  }
+}
+
+@media (max-width: 996px) {
   .heroInner {
     grid-template-columns: 1fr;
-    gap: 2.5rem;
+    gap: 40px;
+    padding: 52px 24px 44px;
   }
 
-  .heroTitle {
-    font-size: 2.5rem;
+  .title {
+    font-size: 34px;
+    letter-spacing: -0.03em;
   }
 
-  .heroImageWrap {
-    box-shadow: 6px 6px 0 var(--brand-blue);
+  .subtitle {
+    max-width: 44ch;
+    font-size: 15px;
+  }
+}
+
+/* At phone width a 1280px app screenshot is mush. The copy carries the page. */
+@media (max-width: 720px) {
+  .figure {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 29px;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .primary,
+  .secondary {
+    flex: 1;
+    justify-content: center;
   }
 }

@@ -1,72 +1,174 @@
-/* Swiss Brutalist feature cards — Cokpyt brand theme */
+/* The page list is the app's table, not a card grid: a hairline panel, a head
+   row, and one line of text per page. */
 
-.features {
-  background: #f5f7f8;
-  border-top: 4px solid #0048ad;
-  padding: 5rem 0;
+.section {
+  background: var(--bg);
 }
 
-.featuresInner {
-  max-width: 1200px;
+.inner {
+  max-width: 1140px;
   margin: 0 auto;
-  padding: 0 2.5rem;
+  padding: 56px 32px 0;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panelTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.panelAction {
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.panelAction:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-strong);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  border-bottom: 1px solid var(--line);
+  animation: fade 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowLink {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2rem;
+  grid-template-columns: minmax(140px, 200px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+  padding: 11px 18px;
+  text-decoration: none;
+  transition: background 100ms;
 }
 
-.featureCard {
-  border: 3px solid #0048ad;
-  background: #fff;
+.rowLink:hover {
+  background: var(--hover);
+  text-decoration: none;
+}
+
+.rowName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rowLink:hover .rowName {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-strong);
+}
+
+.rowDesc {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.note {
   display: flex;
-  flex-direction: column;
-  box-shadow: 7px 7px 0 #0048ad;
-  transition: box-shadow 0.12s, transform 0.12s;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid var(--line);
+  margin-top: 40px;
+  padding: 18px 0 64px;
 }
 
-.featureCard:hover {
-  box-shadow: 4px 4px 0 #0048ad;
-  transform: translate(3px, 3px);
-}
-
-.featureBody {
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.featureTitle {
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #0f1723;
+.noteText {
   margin: 0;
-  line-height: 1.4;
+  max-width: 52ch;
+  font-size: 12.5px;
+  color: var(--muted);
 }
 
-.featureDesc {
-  font-size: 0.9rem;
-  color: #4a5568;
-  line-height: 1.65;
-  margin: 0;
+.noteLink {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-@media screen and (max-width: 1100px) {
-  .featuresInner {
-    grid-template-columns: repeat(2, 1fr);
+.noteLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-strong);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
-@media screen and (max-width: 600px) {
-  .featuresInner {
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    animation: none;
+  }
+}
+
+@media (max-width: 996px) {
+  .inner {
+    padding: 40px 24px 0;
+  }
+
+  .rowLink {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 3px;
+    padding: 11px 16px;
   }
 
-  .featureCard {
-    box-shadow: 5px 5px 0 #0048ad;
+  .rowName {
+    font-size: 12.5px;
+  }
+
+  .note {
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .panelHead {
+    padding: 10px 14px;
+  }
+
+  .rowLink {
+    padding: 10px 14px;
   }
 }
