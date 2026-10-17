@@ -252,10 +252,6 @@ export function toast(message, tone = "info") {
   setTimeout(() => node.remove(), TOAST_MS);
 }
 
-/* ── confirmation ─────────────────────────────────────────────────────────── */
-
-/* confirmDialog replaces window.confirm so the wording, the destructive colour
-   and the button order are ours rather than the browser's. */
 export function confirmDialog({ title, text, confirm = "Confirm", danger = false }) {
   return new Promise((resolve) => {
     const close = (answer) => {
@@ -301,11 +297,6 @@ export function confirmDialog({ title, text, confirm = "Confirm", danger = false
   });
 }
 
-/* ── prompt ───────────────────────────────────────────────────────────────── */
-
-/* promptDialog asks for one line of text. pip accepts a bare name, a pinned
-   version, a path or a URL, so nothing here validates the shape — pip's own
-   error is better than a guess about what a requirement may look like. */
 export function promptDialog({ title, label, placeholder = "", confirm = "Install" }) {
   return new Promise((resolve) => {
     const input = h("input", { class: "input", placeholder, spellcheck: "false", autocomplete: "off" });
@@ -350,20 +341,6 @@ export function promptDialog({ title, label, placeholder = "", confirm = "Instal
   });
 }
 
-/* ── choosing ─────────────────────────────────────────────────────────────── */
-
-/* chooseDialog asks for one item out of a list that has to be fetched first.
-
-   The fetch starts when the dialog opens rather than before it, so a slow
-   lookup shows as a note inside a dialog that is already on screen instead of
-   as a row button that looks like it was ignored. `load` resolves to
-   [{ value, label, selected, badge }], where `selected` marks the option to
-   open on and `badge` is an optional short marker for it.
-
-   The list is built from buttons rather than a native multi-row <select>. A
-   native one paints the OS's own listbox, which ignores the theme, cannot show
-   which row is the one already installed, and sits in the dialog like a widget
-   someone dropped in. */
 export function chooseDialog({ title, label, load, confirm = "OK" }) {
   return new Promise((resolve) => {
     const options = [];
@@ -389,8 +366,6 @@ export function chooseDialog({ title, label, load, confirm = "OK" }) {
       if (event.key === "Escape") finish(null);
     };
 
-    /* The chosen row is marked and named as the listbox's active descendant, so
-       focus stays on the list and the arrows never have to chase it. */
     const mark = (index) => {
       if (index < 0 || index >= options.length) return;
       active = index;
@@ -479,8 +454,6 @@ export function chooseDialog({ title, label, load, confirm = "OK" }) {
         list.hidden = false;
         note.textContent = `${loaded.length} to choose from.`;
 
-        /* Opening on the version already installed is usually the fastest way
-           to find the one wanted; the first entry is the fallback. */
         const chosen = loaded.findIndex((option) => option.selected);
         mark(chosen === -1 ? 0 : chosen);
         list.focus();
@@ -491,49 +464,23 @@ export function chooseDialog({ title, label, load, confirm = "OK" }) {
   });
 }
 
-const MAX_LINES = 1500;
-export const output = {
-  lines: [],
+export async function busy(element, work) {
+  if (!element || element.disabled) return undefined;
 
-  show() {
-    const panel = $("console");
-    if (panel) panel.hidden = false;
-  },
+  const restore = [...element.childNodes];
+  const width = element.offsetWidth;
 
-  hide() {
-    const panel = $("console");
-    if (panel) panel.hidden = true;
-  },
+  element.disabled = true;
+  element.classList.add("is-busy");
+  element.style.minWidth = `${width}px`;
+  replace(element, h("span", { class: "spinner" }));
 
-  clear() {
-    this.lines = [];
-    const body = $("console-body");
-    if (body) body.textContent = "";
-  },
-
-  progress(message) {
-    const slot = $("console-progress");
-    if (slot) slot.textContent = message || "";
-  },
-
-  write(line) {
-    this.lines.push(line);
-    if (this.lines.length > MAX_LINES) this.lines = this.lines.slice(-MAX_LINES);
-    const body = $("console-body");
-    if (!body) return;
-    body.append(document.createTextNode(`${line}\n`));
-    while (body.childNodes.length > MAX_LINES) body.removeChild(body.firstChild);
-    if (!$("console").hidden) body.scrollTop = body.scrollHeight;
-  },
-
-  /* writeAll replaces the panel contents, used when the persisted log is
-     loaded rather than streamed. */
-  writeAll(lines) {
-    this.clear();
-    for (const line of lines) this.write(line);
-  },
-
-  text() {
-    return this.lines.join("\n");
-  },
-};
+  try {
+    return await work();
+  } finally {
+    replace(element, restore);
+    element.classList.remove("is-busy");
+    element.style.minWidth = "";
+    element.disabled = false;
+  }
+}

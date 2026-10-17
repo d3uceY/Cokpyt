@@ -6,7 +6,7 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { actionCell, empty, h, icon, note, panel, scanningBlock, shortPath, table, toast } from "../ui.js";
+import { actionCell, busy, empty, h, icon, note, panel, scanningBlock, shortPath, table, toast } from "../ui.js";
 
 export const meta = {
   eyebrow: "Machine",
@@ -37,26 +37,27 @@ export function actions(ctx) {
       {
         class: "btn",
         type: "button",
-        onclick: async () => {
-          const folder = await api.chooseFolder().catch(() => "");
-          if (!folder) return;
-          ctx.setBusy(true);
-          try {
-            const found = await api.scanFolder(folder);
-            await store.packageCounts();
-            ctx.refresh();
-            toast(
-              found.length
-                ? `Found ${found.length} environment${found.length === 1 ? "" : "s"} in ${folder}.`
-                : `No environments in ${folder}.`,
-              found.length ? "ok" : "warn",
-            );
-          } catch (error) {
-            toast(error.message, "danger");
-          } finally {
-            ctx.setBusy(false);
-          }
-        },
+        onclick: (event) =>
+          busy(event.currentTarget, async () => {
+            const folder = await api.chooseFolder().catch(() => "");
+            if (!folder) return;
+            ctx.setBusy(true);
+            try {
+              const found = await api.scanFolder(folder);
+              await store.packageCounts();
+              ctx.refresh();
+              toast(
+                found.length
+                  ? `Found ${found.length} environment${found.length === 1 ? "" : "s"} in ${folder}.`
+                  : `No environments in ${folder}.`,
+                found.length ? "ok" : "warn",
+              );
+            } catch (error) {
+              toast(error.message, "danger");
+            } finally {
+              ctx.setBusy(false);
+            }
+          }),
       },
       icon("folder_open", 14),
       "Scan a folder",

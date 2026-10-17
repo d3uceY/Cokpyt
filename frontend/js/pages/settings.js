@@ -2,7 +2,7 @@
 
 import { api } from "../api.js";
 import * as store from "../store.js";
-import { confirmDialog, h, icon, panel, replace, toast } from "../ui.js";
+import { busy, h, icon, panel, replace, toast } from "../ui.js";
 
 export const meta = { eyebrow: "Cokpyt", title: "Settings" };
 
@@ -57,7 +57,6 @@ function about() {
   const slot = h("span", { class: "muted", style: "font-size:12px" }, "");
 
   async function check() {
-    slot.textContent = "Asking GitHub…";
     try {
       const info = await api.checkForUpdate();
       if (info.hasUpdate) {
@@ -94,7 +93,7 @@ function about() {
         h("dt", {}, "Platform"),
         h("dd", {}, `${store.state.platform} · ${store.state.envs.length} environments`),
       ),
-      h("div", { class: "row" }, slot, h("span", { class: "grow" }), h("button", { class: "btn btn-sm", type: "button", onclick: check }, "Check for updates")),
+      h("div", { class: "row" }, slot, h("span", { class: "grow" }), h("button", { class: "btn btn-sm", type: "button", onclick: (event) => busy(event.currentTarget, check) }, "Check for updates")),
     ),
   );
 }
@@ -149,40 +148,12 @@ function maintenance(ctx) {
       h(
         "p",
         { class: "muted", style: "font-size:12px" },
-        "A config file, a log, the operation history, and a copy of the PyPI name index. Nothing about your packages is copied anywhere.",
+        "A config file, the operation history, and a copy of the PyPI name index. Nothing about your packages is copied anywhere.",
       ),
       indexRow(),
       h(
         "div",
         { class: "row" },
-        h(
-          "button",
-          { class: "btn btn-sm", type: "button", onclick: () => showLog().catch((error) => toast(error.message, "danger")) },
-          "View the log",
-        ),
-        h(
-          "button",
-          {
-            class: "btn btn-sm btn-danger",
-            type: "button",
-            onclick: async () => {
-              const yes = await confirmDialog({
-                title: "Clear the log?",
-                text: "Log lines only. The operation history is separate.",
-                confirm: "Clear",
-                danger: true,
-              });
-              if (!yes) return;
-              try {
-                await api.clearLogs();
-                toast("Log cleared.", "ok");
-              } catch (error) {
-                toast(error.message, "danger");
-              }
-            },
-          },
-          "Clear the log",
-        ),
         h(
           "button",
           {
@@ -208,7 +179,7 @@ function indexRow() {
   const note = h("span", { class: "muted", style: "font-size:12px" });
   const button = h(
     "button",
-    { class: "btn btn-sm", type: "button", onclick: refetch },
+    { class: "btn btn-sm", type: "button", onclick: (event) => busy(event.currentTarget, refetch) },
     icon("sync", 13),
     "Refetch the index",
   );
@@ -220,7 +191,6 @@ function indexRow() {
   }
 
   async function refetch() {
-    button.disabled = true;
     note.textContent = "Downloading every name on PyPI. About a minute…";
     try {
       show(await api.refreshIndex());
@@ -228,23 +198,10 @@ function indexRow() {
     } catch (error) {
       toast(error.message, "danger");
       show(await api.indexStatus().catch(() => ({})));
-    } finally {
-      button.disabled = false;
     }
   }
 
   api.indexStatus().then(show, () => {});
 
   return h("div", { class: "row" }, note, h("span", { class: "grow" }), button);
-}
-
-async function showLog() {
-  const entries = await api.logs();
-  if (entries.length === 0) {
-    toast("The log is empty.", "info");
-    return;
-  }
-  const { output } = await import("../ui.js");
-  output.show();
-  output.writeAll(entries.map((entry) => `${entry.timestamp}  ${entry.level.padEnd(6)}  ${entry.message}`));
 }
