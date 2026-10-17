@@ -52,6 +52,14 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # main.go embeds frontend/dist and the Taskfile builds it with Vite, so
+      # every build machine needs Node as well as Go.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
       # Builds from the tag commit, so the tag version has to be stamped here
       # too: the commit on the default branch lands after this build started.
       - name: Stamp the tag version
@@ -88,6 +96,14 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # main.go embeds frontend/dist and the Taskfile builds it with Vite, so
+      # every build machine needs Node as well as Go.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Stamp the tag version
         run: go run ./scripts/set-version "${{ github.ref_name }}"
 
@@ -117,6 +133,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      # main.go embeds frontend/dist and the Taskfile builds it with Vite, so
+      # every build machine needs Node as well as Go.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Stamp the tag version
         run: go run ./scripts/set-version "${{ github.ref_name }}"
