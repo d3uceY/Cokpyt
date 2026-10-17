@@ -338,9 +338,7 @@ html[data-theme="dark"] .navbar__items--right button[class*="toggle"] {
 }
 
 /* A plain page that follows a category is not part of it. */
-.theme-doc-sidebar-menu
-  > .menu__list
-  > .menu__list-item:has(.menu__list-item-collapsible)
+.theme-doc-sidebar-menu > .menu__list-item:has(.menu__list-item-collapsible)
   + .menu__list-item {
   border-top: 1px solid var(--line);
   margin-top: 10px;
