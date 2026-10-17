@@ -28,7 +28,9 @@ tasks:
       # The CLI prints its progress on stderr, and Windows PowerShell turns a
       # native command's stderr into an error record, which fails the task and
       # makes a good build exit 1. Merging the two streams keeps it on stdout.
-      - wails3 generate bindings -b -clean 2>&1
+      # Bindings generation type-checks the app, so it needs the same build tags
+      # as the Linux binary or it would look for GTK4 headers.
+      - wails3 generate bindings -b -clean {{if eq OS "linux"}}-f "-tags gtk3"{{end}} 2>&1
       # Vite resolves the bindings' `/wails/runtime.js` import to this copy.
       # It has to come after the bindings, whose -clean empties the directory.
       - wails3 generate runtime -d frontend/bindings

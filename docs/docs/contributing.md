@@ -67,6 +67,10 @@ wails3 package     # NSIS installer on Windows, .app bundle on macOS
 Cross-compiling is a matter of setting `GOOS` and `GOARCH`. Linux and macOS builds need
 `CGO_ENABLED=1` and a platform toolchain; Windows does not.
 
+On Linux, install the GTK3 development packages (`libgtk-3-dev` and
+`libwebkit2gtk-4.1-dev`). The Linux build sets the `gtk3` tag so Wails uses that stack
+instead of its GTK4 default.
+
 ---
 
 ## Project Structure

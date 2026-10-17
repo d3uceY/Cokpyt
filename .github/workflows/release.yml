@@ -70,8 +70,10 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
 
+      # The CLI compiles Wails' GTK/WebKit package, so build it against the
+      # same GTK3 stack installed above instead of the default GTK4.
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+        run: go install -tags gtk3 github.com/wailsapp/wails/v3/cmd/wails3@latest
 
       - name: Build
         run: wails3 build
