@@ -23,7 +23,7 @@
 
 **Cokpyt is the GUI you always wished pip shipped with.**
 
-It is a lightweight desktop app, built with Go and a plain HTML/CSS/JavaScript frontend, and it never touches the command line.
+It is a lightweight desktop app, built with Go and a React frontend, and it never touches the command line.
 
 ---
 
@@ -164,7 +164,7 @@ Any pip operation opens a console panel at the bottom of the window and streams 
 ## Built With
 
 - [Wails v3](https://wails.io) — Go backend, web frontend, one binary
-- Plain HTML, CSS and ES modules — no framework, no bundler, no build step
+- [React](https://react.dev) with [Vite](https://vite.dev) — components and hooks, bundled by Vite
 - ES module bindings generated from the Go services by `wails3 generate bindings -b`
 
 ---
@@ -180,8 +180,9 @@ wails3 dev
 ```
 
 ```bash
+wails3 task bindings              # generate the bindings the frontend imports
+npm --prefix frontend run build   # build the React frontend
 go test ./...                     # Go tests
-node scripts/check-frontend.mjs   # parse every frontend module
 ```
 
 ---

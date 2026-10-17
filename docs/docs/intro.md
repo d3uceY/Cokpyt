@@ -24,7 +24,7 @@ sidebar_position: 1
 
 **Cokpyt is the GUI you always wished pip shipped with.**
 
-Built with Go on top of the [Wails](https://wails.io) framework and a plain HTML, CSS and JavaScript frontend, it puts *every* Python environment on your machine on one dashboard: browse installed packages, search all of PyPI, install and upgrade and uninstall with a click, run an environment health check, and read a logged history of every pip action.
+Built with Go on top of the [Wails](https://wails.io) framework and a React frontend, it puts *every* Python environment on your machine on one dashboard: browse installed packages, search all of PyPI, install and upgrade and uninstall with a click, run an environment health check, and read a logged history of every pip action.
 
 ## Feature Overview
 
@@ -45,7 +45,7 @@ Every pip operation streams into a console panel at the bottom of the window, so
 ## Tech Stack
 
 - **[Wails v3](https://wails.io)** - Go backend, web frontend, one native binary per platform
-- **Plain HTML, CSS and ES modules** - no framework, no build step; `frontend/` is what the webview is served
+- **React with Vite** - components and hooks, bundled into the binary by Vite
 - **Generated ES module bindings** - `wails3 generate bindings -b` turns every public Go service method into a callable JavaScript function
 
 ## Next Steps
