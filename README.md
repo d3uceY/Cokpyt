@@ -11,7 +11,7 @@
 
 <br />
 
-<img src="readme/asssets/hero.png" alt="Cokpyt hero screenshot" width="100%" />
+<img src="readme/asssets/walkthrough.gif" alt="Cokpyt walkthrough: every Python environment, package management, and installing from PyPI" width="100%" />
 
 </div>
 
@@ -107,8 +107,6 @@ A full table of everything in the active environment.
 
 The **Latest** column fills in behind the list while PyPI is queried, so the page never waits on the network to render.
 
-<div align="center"><img src="readme/asssets/installed_packages.png" alt="Installed Packages page" width="100%" /></div>
-
 ---
 
 ### 4. Updates
@@ -117,23 +115,17 @@ Every package in the active environment with a newer version on PyPI, showing th
 
 Where a package publishes one, a link opens its changelog so you can see what changed before you commit.
 
-<div align="center"><img src="readme/asssets/updates.png" alt="Updates page" width="100%" /></div>
-
 ---
 
 ### 5. Search
 
 Type a package name and Cokpyt queries the PyPI index, with descriptions pulled from package metadata. Anything already installed is marked, and a click installs it into the active environment.
 
-<div align="center"><img src="readme/asssets/search.png" alt="Search page" width="100%" /></div>
-
 ---
 
 ### 6. Doctor
 
 Three checks for the active environment: can the interpreter run, does it have a working pip, and is PyPI reachable. Each result is **passed**, a **warning**, or a **failure**, and anything wrong comes with a concrete next step.
-
-<div align="center"><img src="readme/asssets/doctor.png" alt="Doctor page" width="100%" /></div>
 
 ---
 
@@ -143,15 +135,11 @@ Every install, upgrade and uninstall Cokpyt has run, with the package, version, 
 
 Only actions run from this app are listed. Anything you did in a terminal lives only in that terminal.
 
-<div align="center"><img src="readme/asssets/history.png" alt="History page" width="100%" /></div>
-
 ---
 
 ### 8. Cleanup
 
 Cokpyt measures the pip download cache, leftover `.egg-info` directories and `__pycache__` folders, and reports what removing them would free before it deletes anything.
-
-<div align="center"><img src="readme/asssets/cleanup.png" alt="Cleanup page" width="100%" /></div>
 
 ---
 
