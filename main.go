@@ -10,7 +10,12 @@ import (
 )
 
 // Version is shown in the UI and compared against the latest GitHub release.
-const Version = "v0.3.0"
+//
+// The release workflow rewrites this line from the pushed tag before building
+// (scripts/set-version), so the value committed here is only the local-build
+// default. It is a var rather than a const so a build can override it too:
+// go build -ldflags "-X main.Version=v0.4.0".
+var Version = "v0.3.0"
 
 // The whole frontend is embedded, bindings included. There is no build step:
 // the page is plain HTML, CSS and ES modules, and the bindings the CLI

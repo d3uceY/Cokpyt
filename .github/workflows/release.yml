@@ -7,6 +7,42 @@ on:
 
 jobs:
 
+  # The tag is the only place the version is typed by hand. This job writes it
+  # into the committed metadata files on the default branch, so the repo never
+  # drifts behind the last release.
+  stamp-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Stamp the tag version
+        run: go run ./scripts/set-version "${TAG}"
+        env:
+          TAG: ${{ github.ref_name }}
+
+      - name: Commit the stamped files
+        run: |
+          if git diff --quiet; then
+            echo "already at ${TAG}, nothing to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): stamp ${TAG} into the build metadata"
+          git push origin "HEAD:${BRANCH}"
+        env:
+          TAG: ${{ github.ref_name }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+
   build-linux-amd64:
     runs-on: ubuntu-22.04
     steps:
@@ -15,6 +51,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      # Builds from the tag commit, so the tag version has to be stamped here
+      # too: the commit on the default branch lands after this build started.
+      - name: Stamp the tag version
+        run: go run ./scripts/set-version "${{ github.ref_name }}"
 
       - name: Install Linux dependencies
         run: |
@@ -47,6 +88,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Stamp the tag version
+        run: go run ./scripts/set-version "${{ github.ref_name }}"
+
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
 
@@ -73,6 +117,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - name: Stamp the tag version
+        run: go run ./scripts/set-version "${{ github.ref_name }}"
 
       - name: Install NSIS
         run: |
