@@ -2,7 +2,6 @@ package pip
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,8 +63,6 @@ func Cleanup(env environments.Env, kinds []string) error {
 		case "cache":
 			if out, err := env.Pip("cache", "purge").CombinedOutput(); err != nil {
 				problems = append(problems, "cache: "+failureReason(out, err))
-			} else {
-				emitLog("INFO", "purged pip download cache")
 			}
 		case "orphan":
 			problems = append(problems, removeIn(env, "*.egg-info", "egg-info")...)
@@ -84,18 +81,14 @@ func Cleanup(env environments.Env, kinds []string) error {
 // "could not remove X" is more useful than a silent partial success.
 func removeIn(env environments.Env, pattern, label string) []string {
 	var problems []string
-	removed := 0
 	for _, site := range sitePackagesDirs(env) {
 		matches, _ := filepath.Glob(filepath.Join(site, pattern))
 		for _, match := range matches {
 			if err := os.RemoveAll(match); err != nil {
 				problems = append(problems, label+" "+match+": "+err.Error())
-				continue
 			}
-			removed++
 		}
 	}
-	emitLog("INFO", fmt.Sprintf("removed %d %s entries", removed, label))
 	return problems
 }
 

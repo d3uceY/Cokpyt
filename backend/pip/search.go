@@ -50,9 +50,8 @@ type IndexStatus struct {
 // downloads it when nothing has been stored yet. Called once at startup;
 // failing is fine, the next search retries.
 func WarmIndex() {
-	if _, err := loadIndex(); err != nil {
-		emitLog("ERR", "could not build the PyPI index: "+err.Error())
-	}
+	// Failing is fine: the next search builds the index again.
+	_, _ = loadIndex()
 }
 
 // RefreshIndex downloads the index again, replacing the stored copy.
@@ -68,10 +67,7 @@ func RefreshIndex() (IndexStatus, error) {
 
 	// A cache that cannot be written still works for this session, and the next
 	// launch downloads it again.
-	if err := saveIndex(names); err != nil {
-		emitLog("WARN", "could not store the PyPI index: "+err.Error())
-	}
-	emitLog("INFO", fmt.Sprintf("PyPI index refreshed: %d names", len(names)))
+	_ = saveIndex(names)
 	return CachedIndex(), nil
 }
 
@@ -113,9 +109,7 @@ func loadIndex() ([]string, error) {
 		if names, err = fetchIndex(); err != nil {
 			return nil, err
 		}
-		if err := saveIndex(names); err != nil {
-			emitLog("WARN", "could not store the PyPI index: "+err.Error())
-		}
+		_ = saveIndex(names)
 	}
 	indexNames, indexReady = names, true
 	return indexNames, nil

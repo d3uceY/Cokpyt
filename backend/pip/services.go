@@ -53,16 +53,6 @@ type EnvInfo struct {
 	Virtual       bool   `json:"virtual"`
 }
 
-// LogEmitter is set by the app so log lines reach the frontend as they happen.
-var LogEmitter func(level, msg string)
-
-func emitLog(level, msg string) {
-	AppendLog(level, msg)
-	if LogEmitter != nil {
-		LogEmitter(level, msg)
-	}
-}
-
 // ── reading what is installed ────────────────────────────────────────────────
 
 type listEntry struct {
@@ -294,7 +284,7 @@ func pickSitePackages(candidates []string) string {
 // InstallVersion instead, so the two are recorded in History differently: this
 // one keeps whatever the user typed, that one reports the bare package name.
 func Install(env environments.Env, spec string) error {
-	return runStreaming(env, "install", "install", spec)
+	return runPip(env, "install", "install", spec)
 }
 
 // InstallVersion pins an installed package to one exact version.
@@ -303,32 +293,34 @@ func Install(env environments.Env, spec string) error {
 // the environment does not have makes pip uninstall the current one and
 // install the requested one, which is the same operation in either direction.
 func InstallVersion(env environments.Env, name, version string) error {
-	return runStreamingFor(env, name, "install", "install", name+"=="+version)
+	return runPipFor(env, name, "install", "install", name+"=="+version)
 }
 
 // Upgrade upgrades one package to the newest version its metadata allows.
 func Upgrade(env environments.Env, name string) error {
-	return runStreaming(env, "upgrade", "install", "--upgrade", name)
+	return runPip(env, "upgrade", "install", "--upgrade", name)
 }
 
 // Uninstall removes a package and the files it owns.
 func Uninstall(env environments.Env, name string) error {
-	return runStreaming(env, "uninstall", "uninstall", "--yes", name)
+	return runPip(env, "uninstall", "uninstall", "--yes", name)
 }
 
-// runStreaming runs a pip command, forwards every output line to the log, and
-// records the outcome in History.
-func runStreaming(env environments.Env, action string, args ...string) error {
-	return runStreamingFor(env, nameFrom(args), action, args...)
+// runPip runs a pip command and records the outcome in History.
+//
+// The output is collected rather than shown. It is still needed: the installed
+// version is read out of it, and its last non-empty line is the reason a
+// failure reports. Nothing about a run reaches the screen until it is over.
+func runPip(env environments.Env, action string, args ...string) error {
+	return runPipFor(env, nameFrom(args), action, args...)
 }
 
-// runStreamingFor is runStreaming with the name recorded in History given
-// explicitly. A pinned requirement ("requests==2.32.5") is not a package name:
-// it reads badly in History, and the "Successfully installed" lookup matches on
-// "requests-", so it would fail to find the version it just installed.
-func runStreamingFor(env environments.Env, target, action string, args ...string) error {
+// runPipFor is runPip with the name recorded in History given explicitly. A
+// pinned requirement ("requests==2.32.5") is not a package name: it reads badly
+// in History, and the "Successfully installed" lookup matches on "requests-",
+// so it would fail to find the version it just installed.
+func runPipFor(env environments.Env, target, action string, args ...string) error {
 	command := fmt.Sprintf("%s -m pip %s", env.Python, strings.Join(args, " "))
-	emitLog("INFO", fmt.Sprintf("[%s] pip %s", env.Label, strings.Join(args, " ")))
 
 	cmd := env.Pip(args...)
 	stdout, err := cmd.StdoutPipe()
@@ -337,7 +329,6 @@ func runStreamingFor(env environments.Env, target, action string, args ...string
 	}
 	cmd.Stderr = cmd.Stdout
 	if err := cmd.Start(); err != nil {
-		emitLog("ERR", err.Error())
 		appendHistory(newEntry(action, target, "", command, "failed"))
 		return err
 	}
@@ -346,16 +337,13 @@ func runStreamingFor(env environments.Env, target, action string, args ...string
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	var lines []string
 	for scanner.Scan() {
-		line := scanner.Text()
-		lines = append(lines, line)
-		emitLog("STREAM", line)
+		lines = append(lines, scanner.Text())
 	}
 	waitErr := cmd.Wait()
 	output := strings.Join(lines, "\n")
 
 	if waitErr != nil {
 		reason := lastNonEmptyLine(output)
-		emitLog("ERR", fmt.Sprintf("pip %s failed: %s", action, reason))
 		appendHistory(newEntry(action, target, "", command, "failed"))
 		return fmt.Errorf("pip %s failed: %s", action, reason)
 	}
