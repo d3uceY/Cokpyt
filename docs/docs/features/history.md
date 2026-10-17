@@ -20,7 +20,7 @@ Hovering a row also shows the pip command that ran, so you can repeat it by hand
 
 ## Filtering
 
-The tabs filter by action — **All**, **install**, **upgrade**, **uninstall** — each with its own count.
+The tabs filter by action (**All**, **install**, **upgrade**, **uninstall**), each with its own count.
 
 ## Exporting
 

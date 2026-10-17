@@ -5,7 +5,7 @@ toc_max_heading_level: 2
 
 # Installation
 
-Cokpyt ships as a self-contained binary. The PyPI package launches the same app but is experimental — use the binary.
+Cokpyt ships as a self-contained binary. The PyPI package launches the same app but is experimental. Use the binary.
 
 ## Download
 
@@ -19,7 +19,7 @@ Older versions are on the [releases page](https://github.com/d3uceY/Cokpyt/relea
 
 ### Windows
 
-Run the installer. Nothing else to install — the Go runtime is compiled in.
+Run the installer. Nothing else to install; the Go runtime is compiled in.
 
 ### macOS
 

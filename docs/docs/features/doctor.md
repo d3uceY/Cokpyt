@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # Doctor
 
-Three checks against the active environment, each with a plain answer.
+Three checks against the active environment.
 
 ![The Doctor page](/img/doctor.png)
 
@@ -12,7 +12,7 @@ Three checks against the active environment, each with a plain answer.
 |---|---|
 | **Interpreter** | Python runs, and which version |
 | **pip** | `python -m pip` works here, and which version it is |
-| **PyPI** | `https://pypi.org` is reachable — catches firewall and proxy problems |
+| **PyPI** | `https://pypi.org` is reachable (catches firewall and proxy problems) |
 
 | Badge | Meaning |
 |---|---|

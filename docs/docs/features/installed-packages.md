@@ -21,7 +21,7 @@ The checkbox column selects rows for a bulk uninstall.
 
 ## Filtering
 
-The filter box matches names and descriptions as you type. The count beside it shows how many rows are visible out of how many exist.
+The filter box matches names and descriptions as you type. The count beside it shows visible rows out of the total.
 
 ## Installing a package
 

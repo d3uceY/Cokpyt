@@ -19,9 +19,7 @@
 
 ## What is Cokpyt?
 
-`pip list` shows one interpreter. Cokpyt finds *every* Python environment on your machine — launcher installs, standalone runtimes, venvs, conda — and puts them on one dashboard. Browse packages, search PyPI, and install, upgrade or uninstall with a click. No terminal.
-
-**Cokpyt is the GUI you always wished pip shipped with.**
+`pip list` shows one interpreter. Cokpyt finds *every* Python environment on your machine (launcher installs, standalone runtimes, venvs, conda) and puts them on one dashboard. Browse packages, search PyPI, and install, upgrade or uninstall with a click. No terminal.
 
 ---
 
@@ -63,4 +61,4 @@ Bugs and ideas: [CONTRIBUTING.md](CONTRIBUTING.md). Build and test commands live
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

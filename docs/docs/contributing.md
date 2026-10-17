@@ -15,7 +15,7 @@ Check the [issues](https://github.com/d3uceY/Cokpyt/issues) first. A useful repo
 3. Cokpyt version, from **Settings**
 4. Steps to reproduce
 5. What you expected, and what happened
-6. Console output — **copy** in the console header, or **Settings → View the log**
+6. Console output: **copy** in the console header, or **Settings → View the log**
 
 ## Suggesting a feature
 
