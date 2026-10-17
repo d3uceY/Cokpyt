@@ -34,6 +34,15 @@ type App struct {
 	notes    []string
 	scanned  bool          // at least one scan has finished
 	inflight chan struct{} // closed when the running scan finishes, nil when idle
+
+	// ops is the record of pip runs in flight. It lives here rather than in the
+	// page that started the work because a page does not survive navigation.
+	ops     *opLog
+	opsOnce sync.Once
+
+	// emitHook, when set, receives events instead of the Wails application. The
+	// operation tests use it to watch the lifecycle without a window.
+	emitHook func(name string, data ...any)
 }
 
 // NewApp wires the service to the application so it can emit events.
@@ -44,6 +53,10 @@ func NewApp(app *application.App) *App {
 // emit forwards an event to the webview. The nil check is what lets the scan
 // path be tested without a running application.
 func (a *App) emit(name string, data ...any) {
+	if a.emitHook != nil {
+		a.emitHook(name, data...)
+		return
+	}
 	if a.app != nil {
 		a.app.Event.Emit(name, data...)
 	}
@@ -66,9 +79,6 @@ type Bootstrap struct {
 func (a *App) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
 	environments.Progress = func(msg string) {
 		a.emit("scan:progress", msg)
-	}
-	pip.LogEmitter = func(level, msg string) {
-		a.emit("log", level, msg)
 	}
 
 	go func() {
@@ -237,13 +247,18 @@ func (a *App) Versions(python, name string) ([]string, error) {
 	return pip.Versions(env, strings.TrimSpace(name))
 }
 
-// Install installs a requirement into an environment.
+// Install installs a requirement into an environment. The call returns once pip
+// has been started; success or failure arrives as an op:done event.
 func (a *App) Install(python, spec string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
-	return pip.Install(env, strings.TrimSpace(spec))
+	spec = strings.TrimSpace(spec)
+	return a.run("install", env.Python, spec, 1, func(run *opRun) error {
+		run.step(spec)
+		return pip.Install(env, spec)
+	})
 }
 
 // InstallVersion pins a package to one exact version.
@@ -252,7 +267,11 @@ func (a *App) InstallVersion(python, name, version string) error {
 	if !ok {
 		return unknown(python)
 	}
-	return pip.InstallVersion(env, strings.TrimSpace(name), strings.TrimSpace(version))
+	name, version = strings.TrimSpace(name), strings.TrimSpace(version)
+	return a.run("install", env.Python, name+" "+version, 1, func(run *opRun) error {
+		run.step(name)
+		return pip.InstallVersion(env, name, version)
+	})
 }
 
 // Upgrade upgrades one package.
@@ -261,7 +280,10 @@ func (a *App) Upgrade(python, name string) error {
 	if !ok {
 		return unknown(python)
 	}
-	return pip.Upgrade(env, name)
+	return a.run("upgrade", env.Python, name, 1, func(run *opRun) error {
+		run.step(name)
+		return pip.Upgrade(env, name)
+	})
 }
 
 // Uninstall removes one package.
@@ -270,37 +292,38 @@ func (a *App) Uninstall(python, name string) error {
 	if !ok {
 		return unknown(python)
 	}
-	return pip.Uninstall(env, name)
+	return a.run("uninstall", env.Python, name, 1, func(run *opRun) error {
+		run.step(name)
+		return pip.Uninstall(env, name)
+	})
 }
 
-// UpgradeMany upgrades several packages and returns the ones that failed, with
-// a reason. One failure should not abandon the rest of the batch.
-func (a *App) UpgradeMany(python string, names []string) ([]string, error) {
+// UpgradeMany upgrades several packages. One failure does not abandon the rest;
+// the packages that failed are named on the op:done event.
+func (a *App) UpgradeMany(python string, names []string) error {
 	env, ok := a.resolve(python)
 	if !ok {
-		return nil, unknown(python)
+		return unknown(python)
 	}
-	return each(names, func(name string) error { return pip.Upgrade(env, name) }), nil
+	return a.runBatch("upgrade", env.Python, names, func(name string) error { return pip.Upgrade(env, name) })
 }
 
-// UninstallMany removes several packages and returns the ones that failed.
-func (a *App) UninstallMany(python string, names []string) ([]string, error) {
+// UninstallMany removes several packages. Failures are named on the op:done
+// event, like UpgradeMany.
+func (a *App) UninstallMany(python string, names []string) error {
 	env, ok := a.resolve(python)
 	if !ok {
-		return nil, unknown(python)
+		return unknown(python)
 	}
-	return each(names, func(name string) error { return pip.Uninstall(env, name) }), nil
+	return a.runBatch("uninstall", env.Python, names, func(name string) error { return pip.Uninstall(env, name) })
 }
 
-// each runs work for every name and collects "name: reason" for the failures.
-func each(names []string, work func(string) error) []string {
-	failures := []string{}
-	for _, name := range names {
-		if err := work(name); err != nil {
-			failures = append(failures, fmt.Sprintf("%s — %s", name, strings.TrimPrefix(err.Error(), "pip ")))
-		}
+// batchLabel names a multi-package run for the banner that reports it.
+func batchLabel(names []string) string {
+	if len(names) == 1 {
+		return names[0]
 	}
-	return failures
+	return fmt.Sprintf("%d packages", len(names))
 }
 
 // ── maintenance ──────────────────────────────────────────────────────────────
@@ -324,13 +347,16 @@ func (a *App) CleanupScan(python string) ([]pip.Reclaim, error) {
 	return pip.CleanupInfo(env), nil
 }
 
-// CleanupRun removes the requested categories.
+// CleanupRun removes the requested categories. Like the package calls, it
+// returns when the work starts and reports the outcome as an op:done event.
 func (a *App) CleanupRun(python string, kinds []string) error {
 	env, ok := a.resolve(python)
 	if !ok {
 		return unknown(python)
 	}
-	return pip.Cleanup(env, kinds)
+	return a.run("cleanup", env.Python, "pip leftovers", 1, func(*opRun) error {
+		return pip.Cleanup(env, kinds)
+	})
 }
 
 // Search looks for packages on PyPI.
@@ -347,12 +373,6 @@ func (a *App) History() ([]pip.HistoryEntry, error) { return pip.GetHistory() }
 
 // ClearHistory wipes the operation log.
 func (a *App) ClearHistory() error { return pip.ClearHistory() }
-
-// Logs returns the persisted log lines, oldest first.
-func (a *App) Logs() ([]pip.LogEntry, error) { return pip.GetLogs() }
-
-// ClearLogs wipes the persisted log.
-func (a *App) ClearLogs() error { return pip.ClearLogs() }
 
 // ── shell odds and ends ──────────────────────────────────────────────────────
 
